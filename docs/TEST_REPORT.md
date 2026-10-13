@@ -1,6 +1,6 @@
 # 🧪 Automated Test Engine Report & E2E Validation
 
-> **Execution Date & Time**: October 13, 2026 — 19:08:40 CEST  
+> **Execution Date & Time**: October 13, 2026 — 19:22:39 CEST  
 > **Testing Suite**: Claude LoFi Studio Automated E2E Engine (`tests/test_engine.py`)  
 > **Status**: **10/10 Passed (100.0%)**  
 
@@ -19,16 +19,16 @@
 
 | Category | Test Name | Status | Execution Time | Output & Diagnostics |
 |---|---|---|---|---|
-| ✅ **API** | `GET /api/scenes` | **PASSED** | 2136.7 ms | Returned 10 preset scenes with IDs and styles |
-| ✅ **API** | `GET /api/moods` | **PASSED** | 2056.51 ms | Returned 10 musical moods (Chilled Study, Rainy Tokyo, Ghibli, Pixar, etc.) |
-| ✅ **API** | `GET /api/references (300 AI Database)` | **PASSED** | 2036.46 ms | Verified 300 items: LoFi: 100, Anime: 100, Pixar: 100 |
-| ✅ **API** | `GET /api/stock-videos (Stock Video Loops)` | **PASSED** | 2058.97 ms | Verified 6 60fps MP4 loops (rain desk, cafe steam, anime sunset, pixar hearth, etc.) |
-| ✅ **API** | `POST /api/upload-image (Add & Animate Image)` | **PASSED** | 2063.02 ms | Registered custom image scene: custom_1791911292274_5d452a.jpg |
-| ✅ **Audio Engine** | `Procedural Audio DSP Synthesis (4 Moods)` | **PASSED** | 561.19 ms | Generated 4 authentic WAV tracks: {'night': 441044, 'shinkai_anime': 441044, 'ghibli_garden': 441044, 'pixar_cozy': 441044} |
-| ✅ **Video Pipeline** | `Video Loop Rendering (-stream_loop -1 & Subtitle Escaping)` | **PASSED** | 3345.31 ms | Rendered 10s MP4 (Job #a1128911): 1310563 bytes |
-| ✅ **Video Pipeline** | `Still Image Living Animator (Anime Sky Pan Drift & Cel Grade)` | **PASSED** | 6904.78 ms | Synthesized living animated video: 803598 bytes |
-| ✅ **Frontend E2E** | `Next.js Frontend Studio & Modals (Playwright E2E)` | **PASSED** | 14227.47 ms | Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs), and Custom Image Animator Modal |
-| ✅ **Frontend E2E** | `Standalone HTML5 Fallback UI (Port 3000 E2E)` | **PASSED** | 2650.83 ms | Verified zero-dependency standalone studio and captured screenshot 07 |
+| ✅ **API** | `GET /api/scenes` | **PASSED** | 2086.37 ms | Returned 10 preset scenes with IDs and styles |
+| ✅ **API** | `GET /api/moods` | **PASSED** | 2060.51 ms | Returned 10 musical moods (Chilled Study, Rainy Tokyo, Ghibli, Pixar, etc.) |
+| ✅ **API** | `GET /api/references (300 AI Database)` | **PASSED** | 2080.66 ms | Verified 300 items: LoFi: 100, Anime: 100, Pixar: 100 |
+| ✅ **API** | `GET /api/stock-videos (Stock Video Loops)` | **PASSED** | 2029.67 ms | Verified 6 60fps MP4 loops (rain desk, cafe steam, anime sunset, pixar hearth, etc.) |
+| ✅ **API** | `POST /api/upload-image (Add & Animate Image)` | **PASSED** | 2068.04 ms | Registered custom image scene: custom_1791912133508_d15a2b.jpg |
+| ✅ **Audio Engine** | `Procedural Audio DSP Synthesis (4 Moods)` | **PASSED** | 549.05 ms | Generated 4 authentic WAV tracks: {'night': 441044, 'shinkai_anime': 441044, 'ghibli_garden': 441044, 'pixar_cozy': 441044} |
+| ✅ **Video Pipeline** | `Video Loop Rendering (-stream_loop -1 & Subtitle Escaping)` | **PASSED** | 3321.81 ms | Rendered 10s MP4 (Job #1f1cb563): 1314574 bytes |
+| ✅ **Video Pipeline** | `Still Image Living Animator (Anime Sky Pan Drift & Cel Grade)` | **PASSED** | 6803.07 ms | Synthesized living animated video: 795897 bytes |
+| ✅ **Frontend E2E** | `Next.js Frontend Studio & Modals (Playwright E2E)` | **PASSED** | 12721.05 ms | Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs), and Custom Image Animator Modal |
+| ✅ **Frontend E2E** | `Standalone HTML5 Fallback UI (Port 3000 E2E)` | **PASSED** | 2688.57 ms | Verified zero-dependency standalone studio and captured screenshot 07 |
 
 ---
 

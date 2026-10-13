@@ -232,3 +232,21 @@ if (style !== "lofi") chain.push(STYLE_FILTERS[style]);
 let last = "bg";
 ```
 The video rendering pipeline now outputs pure, pristine video backgrounds with style-specific living camera motion (LoFi analog breath, Anime sky pan drift, Pixar 3D float) and clear title typography, free of voice spectrum lines.
+
+---
+
+### 🔴 BUG-010: 404 Console Errors from In-Memory Scene Catalog Stale Entries
+
+#### Date & Time
+**October 13, 2026 — 19:25:00 CEST**
+
+#### Problem Description
+Automated browser audits detected HTTP 404 console errors (`Failed to load resource: the server responded with a status of 404 (Not Found)`) and a broken image on initial dashboard page load.
+
+#### Root Cause Analysis
+When custom still images were uploaded, `server.mjs` pushed the new scene descriptor into the in-memory `SCENES` array. When test scripts or cleanup routines deleted the temporary uploaded files from `public/backgrounds/`, the running Node.js process still kept the descriptors in `SCENES`. Subsequent `/api/scenes` and `/api/moods` responses included deleted files, causing browser requests for `/backgrounds/custom_*.jpg` to 404.
+
+#### Engineering Fix
+1. **Dynamic File Existence Verification**: Implemented `getActiveScenes()` in `server.mjs` to dynamically verify via `stat` that custom uploaded files actually exist on disk before serving them in `/api/scenes` or `/api/moods`.
+2. **Defensive Image Error Handling**: Added `onError` fallback handlers on all scene thumbnail images in `web/app/page.tsx` (`(e.target as HTMLImageElement).src = "/backgrounds/lofi_study_girl.jpg"`).
+3. **Automated Interactive Audit**: Created `tests/audit_ui.py` running headless Playwright to monitor console logs, network requests, DOM visibility, and theme switching. Audit results: **0 Page Errors, 0 Console Errors, 0 Warnings, 0 Broken Images**.

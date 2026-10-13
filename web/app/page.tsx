@@ -952,6 +952,9 @@ export default function Home() {
                         alt={sc.label}
                         className="scene-thumb"
                         loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/backgrounds/lofi_study_girl.jpg";
+                        }}
                       />
                       <div className="scene-info">
                         <div className="scene-title-row">

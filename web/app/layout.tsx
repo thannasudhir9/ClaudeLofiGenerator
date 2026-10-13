@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Lofi Studio — AI Lofi Video & Beat Generator",
+  title: "Lofi Studio | AI Lofi Video & Beat Generator",
   description: "Craft atmospheric lofi beats, aesthetic anime & pixar video loops, and story slides with synthesized Rhodes chords, analog tape flutter, and instant YouTube & Instagram export.",
   keywords: ["lofi generator", "lofi beats", "ai video maker", "chillhop", "lofi music", "youtube lofi", "instagram reels lofi"],
 };

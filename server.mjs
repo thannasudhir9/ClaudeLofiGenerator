@@ -770,7 +770,24 @@ async function handleHistory(req, res) {
   }
 }
 
-function handleMoods(req, res) {
+async function getActiveScenes() {
+  const existing = [];
+  for (const s of SCENES) {
+    if (s.id.startsWith("lofi_") || s.id.startsWith("anime_") || s.id.startsWith("pixar_")) {
+      existing.push(s);
+    } else {
+      try {
+        await stat(path.join(BGS, s.id));
+        existing.push(s);
+      } catch {
+        // file no longer exists on disk, filter out
+      }
+    }
+  }
+  return existing;
+}
+
+async function handleMoods(req, res) {
   const moods = Object.entries(MOODS).map(([key, val]) => ({
     id: key,
     label: val.label,
@@ -779,7 +796,8 @@ function handleMoods(req, res) {
     colors: val.colors,
     defaultBg: val.defaultBg,
   }));
-  sendJson(res, 200, { moods, scenes: SCENES });
+  const scenes = await getActiveScenes();
+  sendJson(res, 200, { moods, scenes });
 }
 
 let cachedCatalog = null;
@@ -900,7 +918,10 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/history") return handleHistory(req, res);
   if (req.method === "GET" && url.pathname === "/api/moods") return handleMoods(req, res);
-  if (req.method === "GET" && url.pathname === "/api/scenes") return sendJson(res, 200, { scenes: SCENES });
+  if (req.method === "GET" && url.pathname === "/api/scenes") {
+    const scenes = await getActiveScenes();
+    return sendJson(res, 200, { scenes });
+  }
   if (req.method === "GET" && url.pathname === "/api/references") return handleReferences(req, res, url);
   if (req.method === "GET" && url.pathname === "/api/stock-videos") return handleStockVideos(req, res);
 
