@@ -210,4 +210,25 @@ This document captures the chronological record of all engineering interactions,
    - Captured and archived screenshot: `screenshots/08_custom_image_animator_modal.png`.
    - Verified 100% test pass rate (10/10 tests passed).
 
+---
+
+### Prompt 9: Fix Green Color Artifact & Remove Audio Voice Spectrum in Video
+**Timestamp**: `2026-10-13T19:10:00+02:00`
+**User Request**: *"there is some issue in the app. I see green color instead of lofi image , and I am seeing voice spectrum in the video - remove it, fix the identified issues"*
+
+#### Root Causes Identified
+1. **Green Color Artifact**:
+   - Test engine uploaded a 1x1 green dummy PNG which was prepended (`SCENES.unshift`) to the global scenes catalog.
+   - Test jobs rendered video with this 1x1 green background, which became `items[0]` in `/api/history` and was auto-loaded by the frontend monitor.
+2. **Audio Voice Spectrum in Video**:
+   - `server.mjs` was overlaying FFmpeg `showwaves` (`[1:a]showwaves=...`) on top of the visual artwork in every exported MP4 video.
+
+#### Actions Taken & Engineering Solutions
+1. **Removed `showwaves` from Video Synthesis**: Cleaned FFmpeg filter graph in `server.mjs`. Video renders now preserve 100% pure cinematic artwork without waveform lines obscuring the scene.
+2. **Catalog Scene Preservation**: Changed `SCENES.unshift` to `SCENES.push` in `server.mjs`, ensuring `lofi_study_girl.jpg` remains at index 0.
+3. **Artifact Cleanup & Sanitization**: Purged dummy test videos from `outputs/` and deleted test images from `public/backgrounds/`.
+4. **Enhanced Test Suite**: Updated `tests/test_engine.py` to use authentic high-res artwork for uploads and added automated post-test artifact cleanup.
+5. **Initial Studio Preview Mode**: Set `previewMode: true` on initial load in `web/app/page.tsx` so the Studio Monitor opens to the live animated scene backdrop with 60fps canvas particles.
+6. **E2E Test Validation**: Ran test engine: 10/10 tests passed; refreshed all screenshots.
+
 

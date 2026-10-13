@@ -222,13 +222,9 @@ async function renderMp4(jobDir, { seconds, bg, title, sub, watermark, timed = [
     bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},setsar=1,fps=30[${bgLabel}]`;
   }
 
-  const chain = [
-    bgScale,
-    `[1:a]showwaves=s=${layout.width}x${layout.waveHeight}:mode=cline:colors=0xf59e0b@0.85:rate=30[w]`,
-    `[bg][w]overlay=0:${layout.waveY}:format=auto[v0]`,
-  ];
-  if (style !== "lofi") chain.splice(1, 0, STYLE_FILTERS[style]);
-  let last = "v0";
+  const chain = [bgScale];
+  if (style !== "lofi") chain.push(STYLE_FILTERS[style]);
+  let last = "bg";
   const texts = [];
   if (title) {
     const cleanTitle = title.slice(0, 60);
@@ -714,7 +710,7 @@ async function handleUploadImage(req, res) {
       style: style,
       url: `/backgrounds/${filename}`,
     };
-    SCENES.unshift(newScene);
+    SCENES.push(newScene);
 
     sendJson(res, 200, {
       success: true,

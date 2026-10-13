@@ -105,7 +105,7 @@ export default function Home() {
     { id: "lofi_slow_morning.jpg", label: "Sunny Morning Room", tag: "Warm morning sunlight & acoustic guitar", style: "lofi", url: "/backgrounds/lofi_slow_morning.jpg" },
   ]);
   const [selectedScene, setSelectedScene] = useState<string>("lofi_study_girl.jpg");
-  const [previewMode, setPreviewMode] = useState<boolean>(false);
+  const [previewMode, setPreviewMode] = useState<boolean>(true);
 
   // Curated 300 Reference Images Repository State (100 Lofi, 100 Anime, 100 Pixar) + Stock Video Loops
   const [referenceRepo, setReferenceRepo] = useState<ReferenceItem[]>([]);

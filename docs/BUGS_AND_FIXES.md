@@ -180,3 +180,55 @@ res.on("data", (chunk) => {
   }
 });
 ```
+
+---
+
+### 🔴 BUG-008: Green Screen Artifact in Studio Monitor & Scene Carousel
+
+#### Date & Time
+**October 13, 2026 — 19:10:00 CEST**
+
+#### Problem Description
+The Studio Monitor displayed a solid chroma green box instead of the authentic LoFi girl scene artwork. Furthermore, several solid green cards titled "E2E Test Living Room" appeared at the beginning of the "Living Animated Scene Artwork" selector.
+
+#### Root Cause Analysis
+1. During automated end-to-end testing, `tests/test_engine.py` sent a 1x1 green dummy pixel (`data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAE...`) to `POST /api/upload-image`.
+2. `server.mjs` prepended (`SCENES.unshift(newScene)`) this uploaded test scene to the front of the global `SCENES` catalog, replacing `Anime Study Desk` (`lofi_study_girl.jpg`) at index 0.
+3. The test suite generated a video with this 1x1 green background, stretching it to 1280x720, creating a green video.
+4. When the frontend studio initialized, `/api/history` returned the green test video as the latest item, and `setResult(data.items[0])` immediately played it on the Studio Monitor.
+
+#### Engineering Fix
+1. **Scene Preservation in Backend**: Changed `SCENES.unshift(newScene)` to `SCENES.push(newScene)` in `server.mjs`, ensuring `lofi_study_girl.jpg` remains the permanent primary default scene at index 0.
+2. **Purged Test Artifacts**: Removed dummy green test files from `public/backgrounds/` and cleaned test jobs from `outputs/`.
+3. **Realistic Test Uploads**: Updated `tests/test_engine.py` to upload authentic high-resolution artwork (`lofi_study_girl.jpg`) instead of 1x1 dummy pixels, and added an automated cleanup hook `cleanup_test_artifacts()` to remove test files after the suite finishes.
+4. **Default Live Scene Preview**: Set `previewMode: true` on initial studio load in `web/app/page.tsx`, so the Studio Monitor always opens to the interactive live animated scene (`Anime Study Desk`) with canvas rain particles, providing an immediate, stunning visual experience.
+
+---
+
+### 🔴 BUG-009: Audio Voice Spectrum Waveform Overlay in Rendered Video
+
+#### Date & Time
+**October 13, 2026 — 19:10:00 CEST**
+
+#### Problem Description
+An amber audio waveform / voice spectrum line (`showwaves`) was rendered across the center and bottom of all exported videos, obscuring the aesthetic visual artwork.
+
+#### Root Cause Analysis
+In `server.mjs`, the FFmpeg filter chain explicitly included `showwaves`:
+```javascript
+const chain = [
+  bgScale,
+  `[1:a]showwaves=s=${layout.width}x${layout.waveHeight}:mode=cline:colors=0xf59e0b@0.85:rate=30[w]`,
+  `[bg][w]overlay=0:${layout.waveY}:format=auto[v0]`,
+];
+```
+This hardcoded a waveform overlay on every video rendered by `renderMp4`.
+
+#### Engineering Fix
+Removed `showwaves` and the wave overlay filter from `server.mjs`:
+```javascript
+const chain = [bgScale];
+if (style !== "lofi") chain.push(STYLE_FILTERS[style]);
+let last = "bg";
+```
+The video rendering pipeline now outputs pure, pristine video backgrounds with style-specific living camera motion (LoFi analog breath, Anime sky pan drift, Pixar 3D float) and clear title typography, free of voice spectrum lines.

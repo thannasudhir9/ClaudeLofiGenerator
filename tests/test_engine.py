@@ -148,14 +148,16 @@ def test_feature_apis():
     except Exception as e:
         record_result("GET /api/stock-videos (Stock Video Loops)", "API", False, (time.time() - t0) * 1000, error=e)
 
-    # 1.5 POST /api/upload-image (Custom Still Image Upload & Animator)
     t0 = time.time()
     try:
-        # 1x1 transparent PNG in base64
-        sample_png_b64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        # Authentic high-resolution LoFi artwork in base64 instead of 1x1 dummy green pixel
+        sample_img_path = ROOT_DIR / "public" / "backgrounds" / "lofi_study_girl.jpg"
+        import base64
+        with open(sample_img_path, "rb") as f:
+            sample_b64 = "data:image/jpeg;base64," + base64.b64encode(f.read()).decode("ascii")
         upload_payload = {
-            "dataUrl": sample_png_b64,
-            "label": "E2E Test Living Room",
+            "dataUrl": sample_b64,
+            "label": "Custom Study Haven",
             "style": "anime"
         }
         code, body, _ = http_post_json(f"{ENGINE_URL}/api/upload-image", upload_payload)
@@ -524,6 +526,16 @@ During the Playwright execution, full-page screenshots were captured and archive
     
     return passed == total
 
+def cleanup_test_artifacts():
+    print("\n--- Cleaning up temporary test artifacts ---")
+    bgs_dir = ROOT_DIR / "public" / "backgrounds"
+    for p in bgs_dir.glob("custom_*"):
+        try:
+            p.unlink()
+            print(f"Cleaned up test background: {p.name}")
+        except Exception:
+            pass
+
 def main():
     print("=" * 70)
     print("🚀 STARTING CLAUDE LOFI STUDIO AUTOMATED TEST ENGINE")
@@ -537,6 +549,7 @@ def main():
     test_feature_playwright_nextjs()
     test_feature_playwright_fallback()
     
+    cleanup_test_artifacts()
     success = generate_test_report()
     
     print("\n" + "=" * 70)
