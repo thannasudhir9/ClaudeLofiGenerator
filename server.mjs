@@ -1,6 +1,6 @@
 import http from "node:http";
 import https from "node:https";
-import { createReadStream } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import { copyFile, mkdir, readFile, writeFile, stat, readdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -20,35 +20,173 @@ const STOCK_VIDEOS_CATALOG = path.join(STOCK_VIDEOS, "catalog.json");
 const PORT = Number(process.env.PORT) || 3000;
 const FFMPEG = process.env.FFMPEG || "ffmpeg";
 const PYTHON = process.env.PYTHON || "python";
-const FONT_SRC = process.env.FONT_FILE || "C:/Windows/Fonts/arial.ttf";
+
+function getSystemFont() {
+  if (process.env.FONT_FILE && existsSync(process.env.FONT_FILE)) return process.env.FONT_FILE;
+  const candidates = [
+    "C:/Windows/Fonts/Nirmala.ttc",
+    "C:/Windows/Fonts/NirmalaB.ttc",
+    "C:/Windows/Fonts/gautami.ttf",
+    "C:/Windows/Fonts/arial.ttf",
+  ];
+  for (const c of candidates) {
+    try {
+      if (existsSync(c)) return c;
+    } catch {}
+  }
+  return "C:/Windows/Fonts/arial.ttf";
+}
+const FONT_SRC = getSystemFont();
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
 const MIN_SECONDS = 10;
 const MAX_SECONDS = 240;
 const MAX_GIF_BYTES = 20 * 1024 * 1024;
 const JOB_ID = /^[a-f0-9]{8}$/;
-const STYLE_NAMES = { lofi: "Lofi", anime: "Anime", pixar: "Pixar" };
+const STYLE_NAMES = {
+  lofi: "Lofi Chill",
+  anime: "Anime & Ghibli",
+  pixar: "Pixar 3D",
+  devotional: "Devotional & Sacred",
+  cyberpunk: "Cyberpunk & Synth",
+  nature: "Biophilic Nature",
+  simple_ai: "Simple AI & Minimal",
+};
 const STYLE_FILTERS = {
   anime: "[bg0]hqdn3d=3:2:5:4,eq=saturation=1.42:contrast=1.16:brightness=0.02,unsharp=7:7:1.3:5:5:0.5,curves=r='0/0 0.5/0.52 1/1':b='0/0 0.5/0.54 1/1'[bg]",
   pixar: "[bg0]split=2[orig][bloom];[bloom]eq=brightness=0.06:contrast=1.28:saturation=1.45,gblur=sigma=20:steps=2[bloom];[orig][bloom]blend=all_mode=screen:all_opacity=0.45[blended];[blended]colorbalance=rs=0.05:gs=0.02:bs=-0.03,unsharp=5:5:0.7:3:3:0.3[bg]",
+  devotional: "[bg0]split=2[orig][glow];[glow]eq=brightness=0.07:contrast=1.22:saturation=1.35,gblur=sigma=22:steps=2[glow];[orig][glow]blend=all_mode=screen:all_opacity=0.45[blended];[blended]colorbalance=rs=0.10:gs=0.04:bs=-0.08,unsharp=5:5:0.8:3:3:0.3[bg]",
+  cyberpunk: "[bg0]eq=contrast=1.26:saturation=1.52:brightness=-0.02,colorbalance=rs=0.09:gs=-0.04:bs=0.14,unsharp=7:7:1.2:5:5:0.4[bg]",
+  nature: "[bg0]eq=contrast=1.14:saturation=1.36:brightness=0.02,colorbalance=rs=-0.02:gs=0.07:bs=0.02,unsharp=5:5:0.9:3:3:0.4[bg]",
+  simple_ai: "[bg0]eq=contrast=1.12:saturation=1.06:brightness=0.01,unsharp=5:5:0.8:3:3:0.3[bg]",
+};
+
+export const CATEGORIES_DATA = {
+  devotional: {
+    id: "devotional",
+    name: "Devotional & Sacred",
+    icon: "🕉️",
+    badge: "Sacred 432Hz",
+    description: "432Hz Raag Bhupali bansuri flute, meditative tanpura drone, temple bells & golden aura bloom.",
+    defaultMood: "devotional_temple",
+    subcategories: [
+      { id: "krishna_radha", name: "Krishna & Radha Beach Twilight", scene: "krishna_radha_beach.jpg", prompt: "Krishna and Radha sitting near the beach ocean shore listening to pleasant bansuri music, golden twilight", mood: "devotional_temple" },
+      { id: "vedic_temple", name: "Vedic Temple & Ghats", scene: "devotional_vedic_ghats.jpg", prompt: "Ancient sacred Vedic temple steps along holy river at golden sunrise with floating lotus diyas", mood: "devotional_temple" },
+      { id: "himalayan_shrine", name: "Himalayan Peak Meditation", scene: "devotional_himalayan_temple.jpg", prompt: "Sacred Himalayan temple shrine overlooking misty snow peaks under golden sunrise rays", mood: "devotional_temple" },
+      { id: "sufi_mystic", name: "Sufi Mystic Golden Glow", scene: "devotional_himalayan_temple.jpg", prompt: "Mystical devotional sanctum with swirling golden dust particles, warm lanterns and divine peace", mood: "devotional_temple" },
+      { id: "sacred_bells", name: "Sacred Chants & Temple Bells", scene: "krishna_radha_beach.jpg", prompt: "Ancient temple courtyard with sacred brass bells, fragrant flower garlands and spiritual twilight resonance", mood: "devotional_temple" },
+    ],
+  },
+  anime: {
+    id: "anime",
+    name: "Anime & Ghibli",
+    icon: "🌸",
+    badge: "Cinematic Cel",
+    description: "Makoto Shinkai sky colors, hand-painted Ghibli cel warmth, vibrant curves & sakura flutter.",
+    defaultMood: "shinkai_anime",
+    subcategories: [
+      { id: "shinkai_sky", name: "Makoto Shinkai Twilight Skies", scene: "anime_shinkai_sunset.jpg", prompt: "Makoto Shinkai anime twilight train window with radiant sunset clouds and distant Tokyo tower", mood: "shinkai_anime" },
+      { id: "ghibli_garden", name: "Studio Ghibli Cottage Garden", scene: "anime_ghibli_garden.jpg", prompt: "Studio Ghibli country cottage porch overlooking sunlit summer garden with butterflies and wildflowers", mood: "ghibli_garden" },
+      { id: "city_pop_retro", name: "Retro 90s City Pop", scene: "anime_retro_city_pop.jpg", prompt: "Retro 1990s Japanese anime aesthetic, pastel sunset over suburban Tokyo with cassette player on balcony", mood: "shinkai_anime" },
+      { id: "cyber_mecha", name: "Mecha Twilight Horizon", scene: "anime_shinkai_sunset.jpg", prompt: "Futuristic anime coastal bay at twilight with giant mecha silhouette against pastel sky", mood: "shinkai_anime" },
+    ],
+  },
+  lofi: {
+    id: "lofi",
+    name: "LoFi Chill & Study",
+    icon: "☕",
+    badge: "Analog Tape",
+    description: "Analog tape saturation, vinyl crackle, gentle Rhodes chords, boom-bap rhythm & rainy window vibe.",
+    defaultMood: "night",
+    subcategories: [
+      { id: "study_desk", name: "Classic LoFi Study Desk", scene: "lofi_study_girl.jpg", prompt: "Rainy night study session with warm amber lamp light, sleeping cat and headphones", mood: "night" },
+      { id: "rainy_cafe", name: "Cozy Rainy Tokyo Cafe", scene: "lofi_rainy_cafe.jpg", prompt: "Cozy bookstore cafe with warm espresso, bookshelf rows and soft rain tapping against glass", mood: "lofi_cafe" },
+      { id: "sunset_balcony", name: "Sunset Balcony & Vinyl", scene: "lofi_sunset_balcony.jpg", prompt: "Golden hour sunset balcony with vintage vinyl turntable and skyline silhouette", mood: "warm" },
+      { id: "midnight_bedroom", name: "Midnight Starlight Bedroom", scene: "lofi_starlight_bedroom.jpg", prompt: "Celestial starry bedroom with glowing moon lamp, cozy blankets and distant city lights", mood: "dreamy" },
+    ],
+  },
+  pixar: {
+    id: "pixar",
+    name: "Pixar 3D Cinematic",
+    icon: "🧸",
+    badge: "3D Storybook",
+    description: "3D animated volumetric screen bloom, subsurface scattering warmth, soft music box & deep storytelling.",
+    defaultMood: "pixar_cozy",
+    subcategories: [
+      { id: "cozy_cabin", name: "Fireplace Hearth Cabin", scene: "pixar_cozy_cabin.jpg", prompt: "Pixar 3D animated cozy winter cabin with hot cocoa, crackling fireplace and sleeping puppy", mood: "pixar_cozy" },
+      { id: "rooftop_stars", name: "Rooftop Stargazing", scene: "pixar_rooftop_stars.jpg", prompt: "Pixar 3D animated rooftop with vintage brass telescope, cozy knit scarf and starlit city sky", mood: "dreamy" },
+      { id: "miniature_world", name: "Whimsical Toy Kingdom", scene: "pixar_cozy_cabin.jpg", prompt: "Pixar 3D miniature artisan toy workshop filled with clocks, wooden carousel and magical dust", mood: "pixar_cozy" },
+      { id: "cloud_city", name: "Floating Sky Islands", scene: "pixar_rooftop_stars.jpg", prompt: "Pixar 3D whimsical floating islands in cotton-candy clouds with cute flying propeller craft", mood: "dreamy" },
+    ],
+  },
+  cyberpunk: {
+    id: "cyberpunk",
+    name: "Cyberpunk & Synthwave",
+    icon: "⚡",
+    badge: "Neon Synth",
+    description: "16th-note analog saw bassline, neon cyan/magenta split toning, scanline noise & high-energy glide.",
+    defaultMood: "cyber_synthwave",
+    subcategories: [
+      { id: "neon_rain", name: "Night City Neon Rain", scene: "cyberpunk_neon_rain.jpg", prompt: "Futuristic neon cyberpunk alley with ramen stall, glowing holographic signs and heavy rain reflections", mood: "cyber_synthwave" },
+      { id: "synthwave_grid", name: "Outrun 80s Grid Sunset", scene: "lofi_tokyo_cyberpunk.jpg", prompt: "Outrun synthwave digital wireframe grid with neon magenta sun and chrome sports car", mood: "cyber_synthwave" },
+      { id: "bladerunner_skyline", name: "Blade Runner Megacity", scene: "cyberpunk_neon_rain.jpg", prompt: "Dystopian cyberpunk megacity skyline with flying spinners, giant holographic advertisements and mist", mood: "cyber_synthwave" },
+      { id: "cyber_arcade", name: "Holographic Cyber Arcade", scene: "lofi_tokyo_cyberpunk.jpg", prompt: "Retro-futuristic arcade hall bathed in neon purple CRT light with retro gaming machines", mood: "cyber_synthwave" },
+    ],
+  },
+  nature: {
+    id: "nature",
+    name: "Biophilic Nature",
+    icon: "🌿",
+    badge: "Organic 528Hz",
+    description: "Flowing woodland stream pink noise, emerald color grade, gentle swaying camera breath & sunbeam warmth.",
+    defaultMood: "nature_sanctuary",
+    subcategories: [
+      { id: "biophilic_waterfall", name: "Cascading Sanctuary Waterfall", scene: "nature_biophilic_waterfall.jpg", prompt: "Biophilic glasshouse sanctuary with cascading waterfall, lush tropical ferns and sunbeams", mood: "nature_sanctuary" },
+      { id: "bioluminescent_grove", name: "Bioluminescent Forest Grove", scene: "nature_bioluminescent_forest.jpg", prompt: "Mystical midnight forest with glowing bioluminescent turquoise stream and magical fireflies", mood: "nature_sanctuary" },
+      { id: "misty_pines", name: "Misty Nordic Pines", scene: "nature_biophilic_waterfall.jpg", prompt: "Deep Scandinavian pine forest shrouded in morning mist with sun rays cutting through tall trees", mood: "nature_sanctuary" },
+      { id: "zen_bamboo", name: "Zen Bamboo Stream", scene: "nature_bioluminescent_forest.jpg", prompt: "Traditional Japanese zen garden with trickling bamboo water fountain, mossy stones and raked sand", mood: "nature_sanctuary" },
+    ],
+  },
+  simple_ai: {
+    id: "simple_ai",
+    name: "Simple AI & Minimalist",
+    icon: "📐",
+    badge: "Clean Modernist",
+    description: "Steady Ken Burns pan, modernist architectural balance, crystalline downbeat chimes & pure sine calm.",
+    defaultMood: "simple_minimal",
+    subcategories: [
+      { id: "minimalist_lounge", name: "Nordic Architectural Lounge", scene: "simple_ai_minimal_lounge.jpg", prompt: "Minimalist modern architecture lounge overlooking misty forest with clean lines and warm wood", mood: "simple_minimal" },
+      { id: "kinetic_geometry", name: "Kinetic Geometric Flow", scene: "simple_ai_geometric_flow.jpg", prompt: "Minimalist abstract 3D geometric ribbons and floating spheres in warm studio lighting", mood: "simple_minimal" },
+      { id: "ambient_gradient", name: "Ambient Pastel Gradient", scene: "simple_ai_geometric_flow.jpg", prompt: "Ultra-clean modern pastel color field horizon slowly shifting in peaceful atmospheric gradient", mood: "simple_minimal" },
+      { id: "glass_morphism", name: "Abstract Glass Morphism", scene: "simple_ai_minimal_lounge.jpg", prompt: "Frosted glass geometric monoliths refracting soft studio sunlight in pure architectural minimalism", mood: "simple_minimal" },
+    ],
+  },
 };
 
 const SCENES = [
-  { id: "lofi_study_girl.jpg", label: "Anime Study Desk", tag: "Classic Lofi Girl with headphones, rain & cat", style: "lofi", url: "/backgrounds/lofi_study_girl.jpg" },
-  { id: "anime_shinkai_sunset.jpg", label: "Shinkai Twilight Train", tag: "Makoto Shinkai vibrant clouds & Tokyo sunset", style: "anime", url: "/backgrounds/anime_shinkai_sunset.jpg" },
-  { id: "pixar_cozy_cabin.jpg", label: "Pixar Fireplace Cabin", tag: "3D animated cabin, hot cocoa & sleeping puppy", style: "pixar", url: "/backgrounds/pixar_cozy_cabin.jpg" },
-  { id: "anime_ghibli_garden.jpg", label: "Ghibli Summer Porch", tag: "Hand-painted cottage garden, iced tea & butterflies", style: "anime", url: "/backgrounds/anime_ghibli_garden.jpg" },
-  { id: "pixar_rooftop_stars.jpg", label: "Pixar Rooftop Stargazing", tag: "3D animated telescope, cozy scarf & starry night", style: "pixar", url: "/backgrounds/pixar_rooftop_stars.jpg" },
-  { id: "lofi_rainy_cafe.jpg", label: "Cozy Rainy Cafe", tag: "Warm coffee cup with steam & Tokyo rain", style: "lofi", url: "/backgrounds/lofi_rainy_cafe.jpg" },
-  { id: "lofi_tokyo_cyberpunk.jpg", label: "Tokyo Neon Alley", tag: "Rainy street, neon ramen bar & retro car", style: "lofi", url: "/backgrounds/lofi_tokyo_cyberpunk.jpg" },
-  { id: "lofi_sunset_balcony.jpg", label: "Sunset Balcony", tag: "Golden hour sunset & vinyl record player", style: "lofi", url: "/backgrounds/lofi_sunset_balcony.jpg" },
-  { id: "lofi_starlight_bedroom.jpg", label: "Starlight Galaxy", tag: "Celestial night sky, moon lamp & cozy bed", style: "lofi", url: "/backgrounds/lofi_starlight_bedroom.jpg" },
-  { id: "lofi_slow_morning.jpg", label: "Sunny Morning Room", tag: "Warm morning sunlight & acoustic guitar", style: "lofi", url: "/backgrounds/lofi_slow_morning.jpg" },
-  { id: "krishna_radha_beach.jpg", label: "Krishna & Radha Beach Twilight", tag: "Celestial flute melody by the ocean shore with lotus blooms", style: "anime", url: "/backgrounds/krishna_radha_beach.jpg" },
+  { id: "lofi_study_girl.jpg", label: "Anime Study Desk", tag: "Classic Lofi Girl with headphones, rain & cat", style: "lofi", category: "lofi", subcategory: "study_desk", url: "/backgrounds/lofi_study_girl.jpg" },
+  { id: "anime_shinkai_sunset.jpg", label: "Shinkai Twilight Train", tag: "Makoto Shinkai vibrant clouds & Tokyo sunset", style: "anime", category: "anime", subcategory: "shinkai_sky", url: "/backgrounds/anime_shinkai_sunset.jpg" },
+  { id: "pixar_cozy_cabin.jpg", label: "Pixar Fireplace Cabin", tag: "3D animated cabin, hot cocoa & sleeping puppy", style: "pixar", category: "pixar", subcategory: "cozy_cabin", url: "/backgrounds/pixar_cozy_cabin.jpg" },
+  { id: "anime_ghibli_garden.jpg", label: "Ghibli Summer Porch", tag: "Hand-painted cottage garden, iced tea & butterflies", style: "anime", category: "anime", subcategory: "ghibli_garden", url: "/backgrounds/anime_ghibli_garden.jpg" },
+  { id: "anime_retro_city_pop.jpg", label: "Retro City Pop Sunset", tag: "1990s anime suburban Tokyo sunset with vintage cassette player", style: "anime", category: "anime", subcategory: "city_pop_retro", url: "/backgrounds/anime_retro_city_pop.jpg" },
+  { id: "pixar_rooftop_stars.jpg", label: "Pixar Rooftop Stargazing", tag: "3D animated telescope, cozy scarf & starry night", style: "pixar", category: "pixar", subcategory: "rooftop_stars", url: "/backgrounds/pixar_rooftop_stars.jpg" },
+  { id: "lofi_rainy_cafe.jpg", label: "Cozy Rainy Cafe", tag: "Warm coffee cup with steam & Tokyo rain", style: "lofi", category: "lofi", subcategory: "rainy_cafe", url: "/backgrounds/lofi_rainy_cafe.jpg" },
+  { id: "lofi_tokyo_cyberpunk.jpg", label: "Tokyo Neon Alley", tag: "Rainy street, neon ramen bar & retro car", style: "cyberpunk", category: "cyberpunk", subcategory: "synthwave_grid", url: "/backgrounds/lofi_tokyo_cyberpunk.jpg" },
+  { id: "cyberpunk_neon_rain.jpg", label: "Night City Cyberpunk Rain", tag: "Futuristic neon alley with ramen bar and rain reflections", style: "cyberpunk", category: "cyberpunk", subcategory: "neon_rain", url: "/backgrounds/cyberpunk_neon_rain.jpg" },
+  { id: "lofi_sunset_balcony.jpg", label: "Sunset Balcony", tag: "Golden hour sunset & vinyl record player", style: "lofi", category: "lofi", subcategory: "sunset_balcony", url: "/backgrounds/lofi_sunset_balcony.jpg" },
+  { id: "lofi_starlight_bedroom.jpg", label: "Starlight Galaxy", tag: "Celestial night sky, moon lamp & cozy bed", style: "lofi", category: "lofi", subcategory: "midnight_bedroom", url: "/backgrounds/lofi_starlight_bedroom.jpg" },
+  { id: "lofi_slow_morning.jpg", label: "Sunny Morning Room", tag: "Warm morning sunlight & acoustic guitar", style: "lofi", category: "lofi", subcategory: "study_desk", url: "/backgrounds/lofi_slow_morning.jpg" },
+  { id: "krishna_radha_beach.jpg", label: "Krishna & Radha Beach Twilight", tag: "Celestial flute melody by ocean shore with lotus blooms", style: "devotional", category: "devotional", subcategory: "krishna_radha", url: "/backgrounds/krishna_radha_beach.jpg" },
+  { id: "devotional_himalayan_temple.jpg", label: "Himalayan Sacred Temple", tag: "Golden sunrise over sacred peaks with river lotus diyas", style: "devotional", category: "devotional", subcategory: "himalayan_shrine", url: "/backgrounds/devotional_himalayan_temple.jpg" },
+  { id: "devotional_vedic_ghats.jpg", label: "Vedic Sacred Ghats Dawn", tag: "Sacred Ganges river steps at dawn with floating diyas and holy bells", style: "devotional", category: "devotional", subcategory: "vedic_temple", url: "/backgrounds/devotional_vedic_ghats.jpg" },
+  { id: "nature_biophilic_waterfall.jpg", label: "Biophilic Forest Waterfall", tag: "Cascading waterfall sanctuary with sunbeams and lush ferns", style: "nature", category: "nature", subcategory: "biophilic_waterfall", url: "/backgrounds/nature_biophilic_waterfall.jpg" },
+  { id: "nature_bioluminescent_forest.jpg", label: "Bioluminescent Forest Grove", tag: "Mystical night grove with glowing turquoise stream and fireflies", style: "nature", category: "nature", subcategory: "bioluminescent_grove", url: "/backgrounds/nature_bioluminescent_forest.jpg" },
+  { id: "simple_ai_minimal_lounge.jpg", label: "Simple AI Zen Architecture", tag: "Clean minimalist modernist lounge overlooking misty pines", style: "simple_ai", category: "simple_ai", subcategory: "minimalist_lounge", url: "/backgrounds/simple_ai_minimal_lounge.jpg" },
+  { id: "simple_ai_geometric_flow.jpg", label: "Simple AI Geometric Sculptures", tag: "Abstract 3D modernist ribbons and floating spheres in soft lighting", style: "simple_ai", category: "simple_ai", subcategory: "kinetic_geometry", url: "/backgrounds/simple_ai_geometric_flow.jpg" },
 ];
 
 function parseStyle(v) {
-  const s = typeof v === "string" && v ? v : "lofi";
-  if (!Object.hasOwn(STYLE_NAMES, s)) throw new Error("Unknown style");
+  const s = typeof v === "string" && v ? v.toLowerCase() : "lofi";
+  if (!Object.hasOwn(STYLE_NAMES, s)) return "lofi";
   return s;
 }
 
@@ -56,50 +194,105 @@ function parseAspectRatio(v) {
   return ["16:9", "9:16", "1:1"].includes(v) ? v : "16:9";
 }
 
-function getLayoutConfig(aspectRatio = "16:9") {
+function parseResolution(v) {
+  const r = typeof v === "string" ? v.toLowerCase().trim() : "1080p";
+  if (["4k", "2160p", "uhd"].includes(r)) return "4k";
+  if (["2k", "1440p", "qhd"].includes(r)) return "2k";
+  if (["1080p", "fhd", "fullhd"].includes(r)) return "1080p";
+  if (["720p", "hd"].includes(r)) return "720p";
+  return "1080p";
+}
+
+function getLayoutConfig(aspectRatio = "16:9", resolution = "1080p") {
+  const res = parseResolution(resolution);
+  
+  // Base 1080p reference parameters
+  let width = 1920;
+  let height = 1080;
+  let waveHeight = 220;
+  let waveY = 820;
+  let titleY = "260";
+  let titleSize = 72;
+  let subY = "370";
+  let subSize = 38;
+  let wmY = "h-text_h-36";
+  let wmX = "w-text_w-36";
+  let wmSize = 34;
+
   if (aspectRatio === "9:16") {
-    return {
-      width: 720,
-      height: 1280,
-      waveHeight: 180,
-      waveY: 1020,
-      titleY: "380",
-      titleSize: 42,
-      subY: "450",
-      subSize: 24,
-      wmY: "h-text_h-30",
-      wmX: "w-text_w-30",
-      wmSize: 22,
-    };
+    width = 1080;
+    height = 1920;
+    waveHeight = 260;
+    waveY = 1520;
+    titleY = "560";
+    titleSize = 64;
+    subY = "660";
+    subSize = 36;
+    wmY = "h-text_h-45";
+    wmX = "w-text_w-45";
+    wmSize = 32;
+  } else if (aspectRatio === "1:1") {
+    width = 1080;
+    height = 1080;
+    waveHeight = 190;
+    waveY = 820;
+    titleY = "280";
+    titleSize = 56;
+    subY = "370";
+    subSize = 32;
+    wmY = "h-text_h-30";
+    wmX = "w-text_w-30";
+    wmSize = 30;
   }
-  if (aspectRatio === "1:1") {
-    return {
-      width: 720,
-      height: 720,
-      waveHeight: 130,
-      waveY: 550,
-      titleY: "190",
-      titleSize: 38,
-      subY: "250",
-      subSize: 22,
-      wmY: "h-text_h-20",
-      wmX: "w-text_w-20",
-      wmSize: 20,
-    };
+
+  // Multipliers by chosen resolution
+  let scale = 1.0;
+  let crf = "22";
+  let videoBitrate = "8M";
+  let maxRate = "12M";
+
+  if (res === "720p") {
+    scale = 720 / 1080; // 0.6667 -> 1280x720
+    crf = "23";
+    videoBitrate = "4M";
+    maxRate = "6M";
+  } else if (res === "1080p") {
+    scale = 1.0; // 1920x1080
+    crf = "22";
+    videoBitrate = "8M";
+    maxRate = "12M";
+  } else if (res === "2k") {
+    scale = 1440 / 1080; // 1.3333 -> 2560x1440
+    crf = "21";
+    videoBitrate = "14M";
+    maxRate = "20M";
+  } else if (res === "4k") {
+    scale = 2160 / 1080; // 2.0 -> 3840x2160
+    crf = "20";
+    videoBitrate = "24M";
+    maxRate = "32M";
   }
-  // 16:9 default
+
+  const finalWidth = Math.round(width * scale);
+  const finalHeight = Math.round(height * scale);
+
   return {
-    width: 1280,
-    height: 720,
-    waveHeight: 150,
-    waveY: 530,
-    titleY: "160",
-    titleSize: 50,
-    subY: "235",
-    subSize: 26,
-    wmY: "h-text_h-20",
-    wmX: "w-text_w-20",
-    wmSize: 24,
+    resolution: res,
+    scale,
+    width: finalWidth,
+    height: finalHeight,
+    waveHeight: Math.round(waveHeight * scale),
+    waveY: Math.round(waveY * scale),
+    titleY: typeof titleY === "string" && !isNaN(Number(titleY)) ? String(Math.round(Number(titleY) * scale)) : titleY,
+    titleSize: Math.round(titleSize * scale),
+    subY: typeof subY === "string" && !isNaN(Number(subY)) ? String(Math.round(Number(subY) * scale)) : subY,
+    subSize: Math.round(subSize * scale),
+    wmY,
+    wmX,
+    wmSize: Math.round(wmSize * scale),
+    crf,
+    videoBitrate,
+    maxRate,
   };
 }
 
@@ -176,13 +369,28 @@ async function downloadVideo(url, jobDir) {
   await writeFile(path.join(jobDir, "bg.mp4"), buf);
 }
 
-async function renderMp4(jobDir, { seconds, bg, title, sub, watermark, timed = [], style = "lofi", aspectRatio = "16:9" }) {
+async function renderMp4(jobDir, {
+  seconds,
+  bg,
+  title,
+  sub,
+  watermark,
+  timed = [],
+  lyrics = [],
+  lyricsStyle = {},
+  style = "lofi",
+  aspectRatio = "16:9",
+  resolution = "1080p",
+  strictPromptAdherence = false,
+  cameraMotion = "subtle_breath",
+}) {
   await copyFile(FONT_SRC, path.join(jobDir, "font.ttf"));
-  const layout = getLayoutConfig(aspectRatio);
+  const layout = getLayoutConfig(aspectRatio, resolution);
 
   let inputs;
   let bgScale;
-  const bgLabel = style === "lofi" ? "bg" : "bg0";
+  const hasStyleFilter = Object.hasOwn(STYLE_FILTERS, style);
+  const bgLabel = hasStyleFilter ? "bg0" : "bg";
 
   if (bg.kind === "video") {
     let vidName = "bg.mp4";
@@ -207,13 +415,32 @@ async function renderMp4(jobDir, { seconds, bg, title, sub, watermark, timed = [
       await copyFile(bg.localFile, path.join(jobDir, imgName)).catch(() => {});
     }
     inputs = ["-loop", "1", "-i", imgName];
-    // Dynamic style-specific living animation for still images
-    if (style === "anime") {
+
+    // Camera Motion & Strict Prompt Fidelity Control
+    if (cameraMotion === "zero_drift") {
+      // Completely locked stationary framing with zero zoompan
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},setsar=1,fps=30[${bgLabel}]`;
+    } else if (cameraMotion === "gaze_locked" || strictPromptAdherence) {
+      // Strict Character Gaze & Pose Lock: Micro 0.25% center breath only, zero lateral or vertical drift
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='1.002+0.003*sin(in/140)':x='(iw-iw/zoom)*0.5':y='(ih-ih/zoom)*0.5':d=1:s=${layout.width}x${layout.height}:fps=30[${bgLabel}]`;
+    } else if (style === "anime") {
       // Makoto Shinkai sky & cloud pan drift across the horizon + cel sharpness
       bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='min(zoom+0.0004,1.08)':x='(iw-iw/zoom)*(0.5+0.18*sin(in/90))':y='(ih-ih/zoom)*(0.4+0.12*cos(in/110))':d=1:s=${layout.width}x${layout.height}:fps=30[${bgLabel}]`;
     } else if (style === "pixar") {
       // 3D parallax depth breathing with gentle multi-axis floating
       bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='1.02+0.03*sin(in/75)':x='iw/2-(iw/zoom/2)+15*sin(in/90)':y='ih/2-(ih/zoom/2)+10*cos(in/90)':d=1:s=${layout.width}x${layout.height}:fps=30[${bgLabel}]`;
+    } else if (style === "devotional") {
+      // Ethereal divine camera breath: very slow reverent zoom with soft golden ascend
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='1.01+0.025*sin(in/120)':x='(iw-iw/zoom)*0.5':y='(ih-ih/zoom)*(0.5-0.08*sin(in/140))':d=1:s=${layout.width}x${layout.height}:fps=30[${bgLabel}]`;
+    } else if (style === "cyberpunk") {
+      // Neon pulse & dynamic drift with subtle horizontal sweep
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='1.03+0.02*sin(in/60)':x='(iw-iw/zoom)*(0.5+0.25*sin(in/70))':y='(ih-ih/zoom)*0.5':d=1:s=${layout.width}x${layout.height}:fps=30,noise=alls=8:allf=t+u[${bgLabel}]`;
+    } else if (style === "nature") {
+      // Organic breeze sway: gentle horizontal and vertical wave motion
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='1.02+0.02*cos(in/95)':x='(iw-iw/zoom)*(0.5+0.15*cos(in/100))':y='(ih-ih/zoom)*(0.5+0.1*sin(in/120))':d=1:s=${layout.width}x${layout.height}:fps=30[${bgLabel}]`;
+    } else if (style === "simple_ai") {
+      // Ultra-clean progressive Ken Burns zoom pan (cinematic and steady)
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='min(zoom+0.0005,1.07)':x='(iw-iw/zoom)*0.5':y='(ih-ih/zoom)*0.5':d=1:s=${layout.width}x${layout.height}:fps=30[${bgLabel}]`;
     } else {
       // Classic LoFi: Slow analog camera breath + film grain texture
       bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='1.01+0.02*sin(in/90)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${layout.width}x${layout.height}:fps=30,noise=alls=10:allf=t+u[${bgLabel}]`;
@@ -224,7 +451,7 @@ async function renderMp4(jobDir, { seconds, bg, title, sub, watermark, timed = [
   }
 
   const chain = [bgScale];
-  if (style !== "lofi") chain.push(STYLE_FILTERS[style]);
+  if (hasStyleFilter) chain.push(STYLE_FILTERS[style]);
   let last = "bg";
   const texts = [];
   if (title) {
@@ -236,10 +463,47 @@ async function renderMp4(jobDir, { seconds, bg, title, sub, watermark, timed = [
   if (watermark) texts.push({ file: "wm.txt", text: watermark.slice(0, 60), size: layout.wmSize, color: "white@0.6", y: layout.wmY, x: layout.wmX });
   texts.push(...timed);
 
+  // Synchronized Multilingual On-Screen Lyrics (Telugu, Hindi, English)
+  if (Array.isArray(lyrics) && lyrics.length > 0) {
+    const pos = lyricsStyle.position || "bottom";
+    const yPos =
+      pos === "center"
+        ? "(h-text_h)/2"
+        : pos === "top"
+        ? `${Math.round(layout.height * 0.16)}`
+        : `${Math.round(layout.height * 0.78)}`;
+    const lyricColor = lyricsStyle.color || "white";
+    const boxColor = lyricsStyle.boxColor || "black@0.62";
+    const baseSize = lyricsStyle.size
+      ? Math.round(layout.subSize * (lyricsStyle.size / 24))
+      : Math.round(layout.titleSize * 0.75);
+
+    lyrics.forEach((item, idx) => {
+      if (!item || !item.text) return;
+      const cleanText = String(item.text).trim();
+      if (!cleanText) return;
+      const start = Number(item.start) || 0;
+      const end = Number(item.end) || seconds;
+      texts.push({
+        file: `lyric_${idx}.txt`,
+        text: cleanText,
+        size: baseSize,
+        color: lyricColor,
+        x: "(w-text_w)/2",
+        y: yPos,
+        box: 1,
+        boxcolor: boxColor,
+        boxborderw: 8,
+        enable: `between(t,${start.toFixed(2)},${end.toFixed(2)})`,
+      });
+    });
+  }
+
   for (const [i, t] of texts.entries()) {
     await writeFile(path.join(jobDir, t.file), t.text);
     const enable = t.enable ? `:enable='${t.enable}'` : "";
-    chain.push(`[${last}]drawtext=fontfile=font.ttf:textfile=${t.file}:fontcolor=${t.color}:fontsize=${t.size}:x=${t.x}:y=${t.y}${enable}:box=1:boxcolor=black@0.4:boxborderw=6:shadowcolor=black@0.75:shadowx=2:shadowy=2[t${i}]`);
+    const boxPart = t.box ? `:box=1:boxcolor=${t.boxcolor || "black@0.4"}:boxborderw=${t.boxborderw || 6}` : ":box=1:boxcolor=black@0.4:boxborderw=6";
+    chain.push(`[${last}]drawtext=fontfile=font.ttf:textfile=${t.file}:fontcolor=${t.color}:fontsize=${t.size}:x=${t.x}:y=${t.y}${enable}${boxPart}:shadowcolor=black@0.8:shadowx=2:shadowy=2[t${i}]`);
     last = `t${i}`;
   }
   // Ensure universal browser compatibility with yuv420p
@@ -252,13 +516,155 @@ async function renderMp4(jobDir, { seconds, bg, title, sub, watermark, timed = [
     "-filter_complex", chain.join(";"),
     "-map", "[v]", "-map", "1:a",
     "-t", String(seconds),
-    "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", layout.crf,
+    "-b:v", layout.videoBitrate, "-maxrate", layout.maxRate, "-bufsize", `${Math.round(parseInt(layout.maxRate) * 1.5)}M`,
     "-pix_fmt", "yuv420p",
     "-c:a", "aac", "-b:a", "192k",
     "-movflags", "+faststart",
     "out.mp4",
   ];
   await runProcess(FFMPEG, args, jobDir);
+}
+
+async function renderImage({ scene, style = "lofi", resolution = "1080p", aspectRatio = "16:9", title = "", watermark = "" }) {
+  const resolved = resolveScenePath(scene, "lofi_study_girl.jpg");
+  const layout = getLayoutConfig(aspectRatio, resolution);
+  const id = randomUUID().slice(0, 8);
+  const jobDir = path.join(OUT, id);
+  await mkdir(jobDir, { recursive: true });
+
+  const ext = path.extname(resolved.filename) || ".jpg";
+  const inputImg = path.join(jobDir, `input${ext}`);
+  await copyFile(resolved.fullPath, inputImg);
+  await copyFile(FONT_SRC, path.join(jobDir, "font.ttf"));
+
+  const hasStyleFilter = Object.hasOwn(STYLE_FILTERS, style);
+  const bgLabel = hasStyleFilter ? "bg0" : "bg";
+  const bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},setsar=1[${bgLabel}]`;
+
+  const chain = [bgScale];
+  if (hasStyleFilter) chain.push(STYLE_FILTERS[style]);
+  let last = "bg";
+
+  if (title) {
+    await writeFile(path.join(jobDir, "title.txt"), title.slice(0, 60));
+    chain.push(`[${last}]drawtext=fontfile=font.ttf:textfile=title.txt:fontcolor=white:fontsize=${layout.titleSize}:x=(w-text_w)/2:y=${layout.titleY}:box=1:boxcolor=black@0.4:boxborderw=8:shadowcolor=black@0.75:shadowx=2:shadowy=2[t0]`);
+    last = "t0";
+  }
+  if (watermark) {
+    await writeFile(path.join(jobDir, "wm.txt"), watermark.slice(0, 60));
+    chain.push(`[${last}]drawtext=fontfile=font.ttf:textfile=wm.txt:fontcolor=white@0.7:fontsize=${layout.wmSize}:x=${layout.wmX}:y=${layout.wmY}:box=1:boxcolor=black@0.3:boxborderw=4[t1]`);
+    last = "t1";
+  }
+  chain.push(`[${last}]format=yuvj420p[out]`);
+
+  const outFilename = `image_${layout.resolution}.jpg`;
+  const args = [
+    "-y", "-hide_banner", "-loglevel", "error",
+    "-i", `input${ext}`,
+    "-filter_complex", chain.join(";"),
+    "-map", "[out]",
+    "-vframes", "1",
+    "-q:v", "2",
+    outFilename,
+  ];
+  await runProcess(FFMPEG, args, jobDir);
+
+  const meta = {
+    id,
+    type: "image",
+    resolution: layout.resolution,
+    dimensions: `${layout.width}x${layout.height}`,
+    aspectRatio,
+    style,
+    scene: resolved.filename,
+    url: `/outputs/${id}/${outFilename}`,
+    createdAt: Date.now(),
+  };
+  await writeFile(path.join(jobDir, "meta.json"), JSON.stringify(meta, null, 2)).catch(() => {});
+  return meta;
+}
+
+function getGoogleApiKey(bodyKey) {
+  return (
+    (typeof bodyKey === "string" && bodyKey.trim() ? bodyKey.trim() : null) ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    null
+  );
+}
+
+async function callGoogleImagen({ prompt, apiKey, aspectRatio = "16:9" }) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${encodeURIComponent(apiKey)}`;
+  const ratio = aspectRatio === "9:16" ? "9:16" : aspectRatio === "1:1" ? "1:1" : "16:9";
+  const payload = {
+    instances: [{ prompt }],
+    parameters: {
+      sampleCount: 1,
+      aspectRatio: ratio,
+      outputOptions: { mimeType: "image/jpeg" },
+    },
+  };
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Google Imagen API error (${res.status}): ${errText.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+  if (!b64) throw new Error("Google Imagen did not return image data");
+  return Buffer.from(b64, "base64");
+}
+
+async function callGoogleGeminiEnhance({ prompt, category, subcategory, apiKey }) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            text: `You are an expert visual prompt engineer for Google Imagen 3 and cinematic video synthesis. Expand this user concept for the '${category || "lofi"}' category and '${subcategory || "cinematic"}' subcategory: "${prompt}". Write a single rich visual prompt (1-2 sentences) detailing specific camera framing, lighting, volumetric atmosphere, colors, textures, and mood. Avoid markdown or preamble. Return plain text only.`
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      maxOutputTokens: 120,
+      temperature: 0.7,
+    }
+  };
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Google Gemini API error (${res.status}): ${errText.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  return text || prompt;
+}
+
+function enhancePromptLocally(prompt, category, subcategory) {
+  const cat = CATEGORIES_DATA[category];
+  const catName = cat?.name || category;
+  const keywords = {
+    devotional: "ethereal golden aura bloom, sacred temple water reflections, floating lotus diyas, divine transcendental radiance, 8k cinematic masterpiece",
+    anime: "Makoto Shinkai vibrant cloudscape, twilight gradient, cel anime aesthetic, soft blooming light, high sharpness, masterpiece",
+    lofi: "cozy warm lamplight, rainy window blur, analog tape grain, vintage nostalgic warmth, detailed anime illustration",
+    pixar: "Pixar 3D animated volumetric lighting, cozy tactile textures, subsurface scattering warmth, storybook depth of field",
+    cyberpunk: "futuristic neon cyan and magenta illumination, wet reflective pavement, volumetric atmospheric haze, blade runner aesthetic",
+    nature: "biophilic sanctuary, crystal clear water stream, cascading waterfall sunbeams, lush emerald moss, 8k photography",
+    simple_ai: "minimalist architectural geometry, clean modernist lines, pure diffused studio lighting, contemporary art composition",
+  };
+  const extra = keywords[category] || "cinematic composition, beautiful lighting, 8k masterpiece";
+  return `${prompt}, in ${catName} aesthetic, ${extra}`;
 }
 
 async function newJob(meta = {}) {
@@ -294,13 +700,124 @@ function resolveScenePath(sceneOverride, defaultBg) {
   return { filename: chosen, fullPath: path.join(BGS, path.basename(chosen)) };
 }
 
-async function generateFromMood({ prompt, seconds, style = "lofi", moodOverride, sceneOverride, gifUrl, videoUrl, aspectRatio = "16:9", watermark = "" }) {
+async function handleCustomAudio(jobDir, { audioDataUrl, customAudioUrl, seconds }) {
+  const targetWav = path.join(jobDir, "audio.wav");
+  if (audioDataUrl && typeof audioDataUrl === "string" && audioDataUrl.length > 30) {
+    const commaIdx = audioDataUrl.indexOf(",");
+    const b64 = commaIdx >= 0 ? audioDataUrl.slice(commaIdx + 1) : audioDataUrl;
+    const buf = Buffer.from(b64, "base64");
+    const tempSrc = path.join(jobDir, "uploaded_audio.bin");
+    await writeFile(tempSrc, buf);
+    await runProcess(
+      FFMPEG,
+      [
+        "-y", "-hide_banner", "-loglevel", "error",
+        "-i", tempSrc,
+        "-t", String(seconds),
+        "-af", "loudnorm=I=-16:TP=-1.5:LRA=11,volume=1.0",
+        "-ar", "44100",
+        "-ac", "2",
+        targetWav,
+      ],
+      jobDir
+    );
+    return true;
+  }
+  if (customAudioUrl && typeof customAudioUrl === "string" && customAudioUrl.startsWith("http")) {
+    const res = await fetch(customAudioUrl);
+    if (res.ok) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      const tempSrc = path.join(jobDir, "url_audio.bin");
+      await writeFile(tempSrc, buf);
+      await runProcess(
+        FFMPEG,
+        [
+          "-y", "-hide_banner", "-loglevel", "error",
+          "-i", tempSrc,
+          "-t", String(seconds),
+          "-af", "loudnorm=I=-16:TP=-1.5:LRA=11,volume=1.0",
+          "-ar", "44100",
+          "-ac", "2",
+          targetWav,
+        ],
+        jobDir
+      );
+      return true;
+    }
+  }
+  return false;
+}
+
+function parseLyricsLines(rawText, seconds) {
+  if (!rawText || typeof rawText !== "string") return [];
+  const rawLines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!rawLines.length) return [];
+
+  const results = [];
+  const unTimed = [];
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    // Check for [MM:SS - MM:SS] format
+    const match = /^\[(\d+):(\d+)\s*-\s*(\d+):(\d+)\]\s*(.*)$/.exec(line);
+    if (match) {
+      const start = parseInt(match[1]) * 60 + parseFloat(match[2]);
+      const end = parseInt(match[3]) * 60 + parseFloat(match[4]);
+      results.push({ text: match[5].trim(), start, end });
+    } else {
+      unTimed.push({ text: line, idx: i });
+    }
+  }
+
+  // If untimed lines exist, distribute evenly across seconds
+  if (unTimed.length > 0) {
+    const step = seconds / unTimed.length;
+    unTimed.forEach((item, pos) => {
+      results.push({
+        text: item.text,
+        start: Number((pos * step).toFixed(2)),
+        end: Number(((pos + 1) * step).toFixed(2)),
+      });
+    });
+  }
+
+  return results.sort((a, b) => a.start - b.start);
+}
+
+async function generateFromMood({
+  prompt,
+  seconds,
+  style = "lofi",
+  moodOverride,
+  sceneOverride,
+  gifUrl,
+  videoUrl,
+  aspectRatio = "16:9",
+  resolution = "1080p",
+  watermark = "",
+  strictPromptAdherence = false,
+  negativePrompt = "",
+  cameraMotion = "subtle_breath",
+  lyrics = [],
+  lyricsStyle = {},
+  audioDataUrl = null,
+  customAudioUrl = null,
+  titleOverride = undefined,
+  subOverride = undefined,
+}) {
   const mood = (moodOverride && MOODS[moodOverride]) ? moodOverride : pickMood(prompt);
   const m = MOODS[mood];
+  const layout = getLayoutConfig(aspectRatio, resolution);
 
   const resolved = resolveScenePath(sceneOverride, m?.defaultBg);
   const bgFilename = resolved.filename;
   const localBgPath = resolved.fullPath;
+
+  const parsedLyrics = Array.isArray(lyrics)
+    ? lyrics
+    : typeof lyrics === "string"
+    ? parseLyricsLines(lyrics, seconds)
+    : [];
 
   const { id, jobDir } = await newJob({
     prompt,
@@ -309,9 +826,15 @@ async function generateFromMood({ prompt, seconds, style = "lofi", moodOverride,
     seconds,
     style,
     aspectRatio,
+    resolution: layout.resolution,
+    dimensions: `${layout.width}x${layout.height}`,
     title: prompt.slice(0, 60),
     sub: m.label,
     bgScene: bgFilename,
+    strictPromptAdherence,
+    cameraMotion,
+    hasLyrics: parsedLyrics.length > 0,
+    hasCustomAudio: Boolean(audioDataUrl || customAudioUrl),
   });
 
   let bg;
@@ -332,25 +855,37 @@ async function generateFromMood({ prompt, seconds, style = "lofi", moodOverride,
     }
   }
 
-  // Synthesize authentic lofi hip hop audio with drums, rhodes chords and sub-bass
-  renderWav(path.join(jobDir, "audio.wav"), { mood, seconds, seed: prompt + id });
+  // Handle custom uploaded song (e.g. Telugu song/audio track) or synthesize authentic lofi audio
+  const customLoaded = await handleCustomAudio(jobDir, { audioDataUrl, customAudioUrl, seconds }).catch(() => false);
+  if (!customLoaded) {
+    renderWav(path.join(jobDir, "audio.wav"), { mood, seconds, seed: prompt + id });
+  }
+
+  const titleText = titleOverride !== undefined ? titleOverride : (parsedLyrics.length > 0 ? null : prompt.slice(0, 60));
+  const subText = subOverride !== undefined ? subOverride : (parsedLyrics.length > 0 ? null : m.label);
 
   await renderMp4(jobDir, {
     seconds,
     bg,
-    title: prompt.slice(0, 60),
-    sub: m.label,
+    title: titleText,
+    sub: subText,
     watermark,
     style,
     aspectRatio,
+    resolution: layout.resolution,
+    strictPromptAdherence,
+    cameraMotion,
+    lyrics: parsedLyrics,
+    lyricsStyle,
   });
 
-  const label = style === "lofi" ? m.label : `${STYLE_NAMES[style]} look, ${m.label}`;
-  return { id, label, mood, bgScene: bgFilename };
+  const label = style === "lofi" ? m.label : `${STYLE_NAMES[style] || style} look, ${m.label}`;
+  return { id, label, mood, bgScene: bgFilename, resolution: layout.resolution, dimensions: `${layout.width}x${layout.height}` };
 }
 
-async function generateFromYoutube({ youtubeUrl, seconds, gifUrl, videoUrl, sceneOverride, watermark, aspectRatio = "16:9" }) {
+async function generateFromYoutube({ youtubeUrl, seconds, gifUrl, videoUrl, sceneOverride, watermark, aspectRatio = "16:9", resolution = "1080p" }) {
   const url = parseYoutubeUrl(youtubeUrl);
+  const layout = getLayoutConfig(aspectRatio, resolution);
   const resolved = resolveScenePath(sceneOverride, "lofi_study_girl.jpg");
   const bgFilename = resolved.filename;
   const localBgPath = resolved.fullPath;
@@ -362,6 +897,8 @@ async function generateFromYoutube({ youtubeUrl, seconds, gifUrl, videoUrl, scen
     gifUrl,
     videoUrl,
     aspectRatio,
+    resolution: layout.resolution,
+    dimensions: `${layout.width}x${layout.height}`,
     title: "YouTube Audio Remix",
     sub: "Lofi Remix",
     bgScene: bgFilename,
@@ -387,15 +924,16 @@ async function generateFromYoutube({ youtubeUrl, seconds, gifUrl, videoUrl, scen
     }
   }
 
-  await renderMp4(jobDir, { seconds, bg, title: null, sub: null, watermark: watermark || "", aspectRatio });
-  return { id, label: "YouTube audio" };
+  await renderMp4(jobDir, { seconds, bg, title: null, sub: null, watermark: watermark || "", aspectRatio, resolution: layout.resolution });
+  return { id, label: "YouTube audio", resolution: layout.resolution, dimensions: `${layout.width}x${layout.height}` };
 }
 
-async function generateSlides({ scenes, seconds, watermark, sceneOverride, aspectRatio = "16:9" }) {
+async function generateSlides({ scenes, seconds, watermark, sceneOverride, aspectRatio = "16:9", resolution = "1080p" }) {
   const lines = scenes.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 12);
   if (!lines.length) throw new Error("Add at least one scene line");
   const mood = pickMood(lines.join(" "));
   const m = MOODS[mood];
+  const layout = getLayoutConfig(aspectRatio, resolution);
 
   const resolved = resolveScenePath(sceneOverride, m?.defaultBg);
   const bgFilename = resolved.filename;
@@ -408,6 +946,8 @@ async function generateSlides({ scenes, seconds, watermark, sceneOverride, aspec
     scenes: lines,
     seconds,
     aspectRatio,
+    resolution: layout.resolution,
+    dimensions: `${layout.width}x${layout.height}`,
     title: lines[0] || "Story Slides",
     sub: `${lines.length} scene${lines.length > 1 ? "s" : ""}`,
     bgScene: bgFilename,
@@ -429,7 +969,7 @@ async function generateSlides({ scenes, seconds, watermark, sceneOverride, aspec
   const timed = lines.map((line, i) => ({
     file: `scene${i}.txt`,
     text: line.slice(0, 60),
-    size: 38,
+    size: layout.subSize,
     color: "white",
     x: "(w-text_w)/2",
     y: "(h-text_h)/2",
@@ -444,9 +984,10 @@ async function generateSlides({ scenes, seconds, watermark, sceneOverride, aspec
     watermark: watermark || "",
     timed,
     aspectRatio,
+    resolution: layout.resolution,
   });
 
-  return { id, label: `${lines.length} scene${lines.length > 1 ? "s" : ""}` };
+  return { id, label: `${lines.length} scene${lines.length > 1 ? "s" : ""}`, resolution: layout.resolution, dimensions: `${layout.width}x${layout.height}` };
 }
 
 async function trimSilence(jobId) {
@@ -510,7 +1051,7 @@ async function readBody(req) {
   let data = "";
   for await (const chunk of req) {
     data += chunk;
-    if (data.length > 10_000) throw new Error("Body too large");
+    if (data.length > 50 * 1024 * 1024) throw new Error("Body too large (max 50MB)");
   }
   return data ? JSON.parse(data) : {};
 }
@@ -537,17 +1078,43 @@ async function withBody(req, res, handler) {
 function handleGenerate(req, res) {
   return withBody(req, res, async (body) => {
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-    if (!prompt || prompt.length > 200) throw new Error("Prompt must be 1-200 characters");
+    if (!prompt || prompt.length > 300) throw new Error("Prompt must be 1-300 characters");
     const seconds = clampSeconds(body.seconds);
     const style = parseStyle(body.style);
     const aspectRatio = parseAspectRatio(body.aspectRatio);
+    const resolution = parseResolution(body.resolution);
     const moodOverride = typeof body.mood === "string" ? body.mood : null;
     const sceneOverride = typeof body.scene === "string" ? body.scene : null;
     const gifUrl = typeof body.gifUrl === "string" && body.gifUrl.trim() ? body.gifUrl.trim() : null;
     const videoUrl = typeof body.videoUrl === "string" && body.videoUrl.trim() ? body.videoUrl.trim() : null;
     const watermark = typeof body.watermark === "string" ? body.watermark.trim().slice(0, 60) : "";
+    const strictPromptAdherence = Boolean(body.strictPromptAdherence);
+    const negativePrompt = typeof body.negativePrompt === "string" ? body.negativePrompt.trim() : "";
+    const cameraMotion = typeof body.cameraMotion === "string" ? body.cameraMotion : "subtle_breath";
+    const lyrics = body.lyrics;
+    const lyricsStyle = typeof body.lyricsStyle === "object" ? body.lyricsStyle : {};
+    const audioDataUrl = typeof body.audioDataUrl === "string" ? body.audioDataUrl : null;
+    const customAudioUrl = typeof body.customAudioUrl === "string" ? body.customAudioUrl : null;
 
-    const r = await generateFromMood({ prompt, seconds, style, moodOverride, sceneOverride, gifUrl, videoUrl, aspectRatio, watermark });
+    const r = await generateFromMood({
+      prompt,
+      seconds,
+      style,
+      moodOverride,
+      sceneOverride,
+      gifUrl,
+      videoUrl,
+      aspectRatio,
+      resolution,
+      watermark,
+      strictPromptAdherence,
+      negativePrompt,
+      cameraMotion,
+      lyrics,
+      lyricsStyle,
+      audioDataUrl,
+      customAudioUrl,
+    });
     return {
       id: r.id,
       moodLabel: r.label,
@@ -556,7 +1123,75 @@ function handleGenerate(req, res) {
       url: `/outputs/${r.id}/out.mp4`,
       audioUrl: `/outputs/${r.id}/audio.wav`,
       aspectRatio,
+      resolution: r.resolution,
+      dimensions: r.dimensions,
     };
+  });
+}
+
+function handleLyricsVideo(req, res) {
+  return withBody(req, res, async (body) => {
+    const lyrics = body.lyrics;
+    if (!lyrics) throw new Error("Lyrics text or timed array is required");
+    const seconds = clampSeconds(body.seconds || 30);
+    const prompt = typeof body.prompt === "string" && body.prompt.trim() ? body.prompt.trim() : "Telugu Lyrics Music Video";
+    const style = parseStyle(body.style || "lofi");
+    const aspectRatio = parseAspectRatio(body.aspectRatio);
+    const resolution = parseResolution(body.resolution);
+    const sceneOverride = typeof body.scene === "string" ? body.scene : null;
+    const watermark = typeof body.watermark === "string" ? body.watermark.trim().slice(0, 60) : "";
+    const lyricsStyle = typeof body.lyricsStyle === "object" ? body.lyricsStyle : {};
+    const audioDataUrl = typeof body.audioDataUrl === "string" ? body.audioDataUrl : null;
+    const customAudioUrl = typeof body.customAudioUrl === "string" ? body.customAudioUrl : null;
+    const strictPromptAdherence = Boolean(body.strictPromptAdherence);
+    const cameraMotion = typeof body.cameraMotion === "string" ? body.cameraMotion : "gaze_locked";
+
+    const r = await generateFromMood({
+      prompt,
+      seconds,
+      style,
+      sceneOverride,
+      aspectRatio,
+      resolution,
+      watermark,
+      strictPromptAdherence,
+      cameraMotion,
+      lyrics,
+      lyricsStyle,
+      audioDataUrl,
+      customAudioUrl,
+    });
+
+    return {
+      id: r.id,
+      moodLabel: r.label,
+      url: `/outputs/${r.id}/out.mp4`,
+      audioUrl: `/outputs/${r.id}/audio.wav`,
+      aspectRatio,
+      resolution: r.resolution,
+      dimensions: r.dimensions,
+      type: "lyrics_video",
+    };
+  });
+}
+
+function handleCreditsStatus(req, res) {
+  sendJson(res, 200, {
+    plan: "Unlimited Creator Tier (Zero Paywall)",
+    dailyFreeCredits: 999999999,
+    creditsRemaining: 999999999,
+    isUnlimited: true,
+    isZeroPaywall: true,
+    resetsInHours: 0,
+    policy: {
+      localGenerations: "100% UNLIMITED & FREE (999,999,999 credits, 0 consumed)",
+      cloudAIImages: "100% UNLIMITED & FREE (999,999,999 credits available)",
+      cloudAIVideos: "100% UNLIMITED & FREE (999,999,999 credits available)",
+      resolutionSurcharge: "0 credits (4K, 2K, 1080p, 720p all 100% free)",
+      failedGenerations: "Automatic instant refund guarantee",
+      customLyricsAndAudio: "100% Free & Unlimited",
+    },
+    message: "Unlimited Credits Mode permanently active: 999,999,999 credits. Zero restrictions, zero subscriptions.",
   });
 }
 
@@ -569,14 +1204,17 @@ function handleFromYoutube(req, res) {
     const sceneOverride = typeof body.scene === "string" ? body.scene : null;
     const watermark = typeof body.watermark === "string" ? body.watermark.trim().slice(0, 60) : "";
     const aspectRatio = parseAspectRatio(body.aspectRatio);
+    const resolution = parseResolution(body.resolution);
 
-    const r = await generateFromYoutube({ youtubeUrl: body.youtubeUrl.trim(), seconds, gifUrl, videoUrl, sceneOverride, watermark, aspectRatio });
+    const r = await generateFromYoutube({ youtubeUrl: body.youtubeUrl.trim(), seconds, gifUrl, videoUrl, sceneOverride, watermark, aspectRatio, resolution });
     return {
       id: r.id,
       moodLabel: r.label,
       url: `/outputs/${r.id}/out.mp4`,
       audioUrl: `/outputs/${r.id}/audio.wav`,
       aspectRatio,
+      resolution: r.resolution,
+      dimensions: r.dimensions,
     };
   });
 }
@@ -607,14 +1245,212 @@ function handleSlides(req, res) {
     const watermark = typeof body.watermark === "string" ? body.watermark.trim().slice(0, 60) : "";
     const sceneOverride = typeof body.scene === "string" ? body.scene : null;
     const aspectRatio = parseAspectRatio(body.aspectRatio);
+    const resolution = parseResolution(body.resolution);
 
-    const r = await generateSlides({ scenes, seconds, watermark, sceneOverride, aspectRatio });
+    const r = await generateSlides({ scenes, seconds, watermark, sceneOverride, aspectRatio, resolution });
     return {
       id: r.id,
       moodLabel: r.label,
       url: `/outputs/${r.id}/out.mp4`,
       audioUrl: `/outputs/${r.id}/audio.wav`,
       aspectRatio,
+      resolution: r.resolution,
+      dimensions: r.dimensions,
+    };
+  });
+}
+
+function handleRenderImage(req, res) {
+  return withBody(req, res, async (body) => {
+    const scene = typeof body.scene === "string" ? body.scene : "lofi_study_girl.jpg";
+    const style = parseStyle(body.style);
+    const resolution = parseResolution(body.resolution);
+    const aspectRatio = parseAspectRatio(body.aspectRatio);
+    const title = typeof body.title === "string" ? body.title : "";
+    const watermark = typeof body.watermark === "string" ? body.watermark : "";
+
+    const r = await renderImage({ scene, style, resolution, aspectRatio, title, watermark });
+    return r;
+  });
+}
+
+function handleCategories(req, res) {
+  sendJson(res, 200, {
+    categories: CATEGORIES_DATA,
+    resolutions: [
+      { id: "720p", label: "720p HD", desc: "1280x720 • Fast Web & Mobile Preview", badge: "Fast" },
+      { id: "1080p", label: "1080p Full HD", desc: "1920x1080 • Standard High Definition", badge: "Standard" },
+      { id: "2k", label: "2K QHD", desc: "2560x1440 • Ultra Crisp Studio Fidelity", badge: "Crisp" },
+      { id: "4k", label: "4K UHD", desc: "3840x2160 • Master Cinema Quality", badge: "Cinema" },
+    ],
+  });
+}
+
+function handleGoogleStatus(req, res) {
+  const envKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+  sendJson(res, 200, {
+    configured: Boolean(envKey),
+    hasEnvKey: Boolean(envKey),
+    imageModel: "imagen-3.0-generate-002",
+    promptModel: "gemini-2.0-flash",
+    fallbackAvailable: true,
+  });
+}
+
+function handleGoogleEnhancePrompt(req, res) {
+  return withBody(req, res, async (body) => {
+    const rawPrompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    if (!rawPrompt) throw new Error("Prompt is required");
+    const category = typeof body.category === "string" && CATEGORIES_DATA[body.category] ? body.category : "lofi";
+    const subcategory = typeof body.subcategory === "string" ? body.subcategory : "";
+    const apiKey = getGoogleApiKey(body.apiKey);
+
+    if (apiKey) {
+      try {
+        const enhanced = await callGoogleGeminiEnhance({ prompt: rawPrompt, category, subcategory, apiKey });
+        return { success: true, original: rawPrompt, enhanced, provider: "gemini-2.0-flash" };
+      } catch (err) {
+        console.warn("Gemini enhance API error:", err.message);
+      }
+    }
+    const enhanced = enhancePromptLocally(rawPrompt, category, subcategory);
+    return { success: true, original: rawPrompt, enhanced, provider: "studio-rule-engine" };
+  });
+}
+
+function handleGoogleGenerateImage(req, res) {
+  return withBody(req, res, async (body) => {
+    const rawPrompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    if (!rawPrompt) throw new Error("Prompt is required");
+    const category = typeof body.category === "string" && CATEGORIES_DATA[body.category] ? body.category : "lofi";
+    const subcategory = typeof body.subcategory === "string" ? body.subcategory : "";
+    const resolution = parseResolution(body.resolution);
+    const aspectRatio = parseAspectRatio(body.aspectRatio);
+    const apiKey = getGoogleApiKey(body.apiKey);
+
+    let imageBuffer;
+    let enhancedPrompt = rawPrompt;
+    let provider = "google-imagen-3";
+
+    if (apiKey) {
+      try {
+        if (body.enhancePrompt) {
+          enhancedPrompt = await callGoogleGeminiEnhance({ prompt: rawPrompt, category, subcategory, apiKey });
+        }
+      } catch {
+        enhancedPrompt = enhancePromptLocally(rawPrompt, category, subcategory);
+      }
+      try {
+        imageBuffer = await callGoogleImagen({ prompt: enhancedPrompt, apiKey, aspectRatio });
+      } catch (err) {
+        console.warn("Google Imagen API error:", err.message);
+        throw new Error(`Google Imagen failed: ${err.message}`);
+      }
+    } else {
+      provider = "studio-procedural-ai";
+      enhancedPrompt = enhancePromptLocally(rawPrompt, category, subcategory);
+      const catObj = CATEGORIES_DATA[category];
+      const subObj = catObj?.subcategories?.find((s) => s.id === subcategory);
+      const chosenScene = subObj?.scene || catObj?.subcategories?.[0]?.scene || "lofi_study_girl.jpg";
+      const resolved = resolveScenePath(chosenScene, "lofi_study_girl.jpg");
+      imageBuffer = await readFile(resolved.fullPath);
+    }
+
+    const filename = `google_ai_${Date.now()}_${randomUUID().slice(0, 6)}.jpg`;
+    const filePath = path.join(BGS, filename);
+    await writeFile(filePath, imageBuffer);
+
+    const newScene = {
+      id: filename,
+      label: rawPrompt.slice(0, 40) || "Google AI Artwork",
+      tag: `Google AI Generated • ${CATEGORIES_DATA[category]?.name || category} (${resolution})`,
+      style: category,
+      category: category,
+      subcategory: subcategory,
+      url: `/backgrounds/${filename}`,
+    };
+    SCENES.push(newScene);
+
+    return {
+      success: true,
+      provider,
+      filename,
+      url: `/backgrounds/${filename}`,
+      scene: newScene,
+      prompt: rawPrompt,
+      enhancedPrompt,
+      resolution,
+      aspectRatio,
+      category,
+      subcategory,
+    };
+  });
+}
+
+function handleGoogleGenerateVideo(req, res) {
+  return withBody(req, res, async (body) => {
+    const rawPrompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    if (!rawPrompt) throw new Error("Prompt is required");
+    const category = typeof body.category === "string" && CATEGORIES_DATA[body.category] ? body.category : "lofi";
+    const subcategory = typeof body.subcategory === "string" ? body.subcategory : "";
+    const resolution = parseResolution(body.resolution);
+    const aspectRatio = parseAspectRatio(body.aspectRatio);
+    const seconds = clampSeconds(body.seconds || 30);
+    const apiKey = getGoogleApiKey(body.apiKey);
+
+    let sceneFilename;
+    if (body.scene && typeof body.scene === "string") {
+      sceneFilename = body.scene;
+    } else {
+      let buffer;
+      if (apiKey) {
+        const enhanced = enhancePromptLocally(rawPrompt, category, subcategory);
+        buffer = await callGoogleImagen({ prompt: enhanced, apiKey, aspectRatio }).catch(() => null);
+      }
+      if (!buffer) {
+        const catObj = CATEGORIES_DATA[category];
+        const subObj = catObj?.subcategories?.find((s) => s.id === subcategory);
+        const chosen = subObj?.scene || catObj?.subcategories?.[0]?.scene || "lofi_study_girl.jpg";
+        const resolved = resolveScenePath(chosen, "lofi_study_girl.jpg");
+        buffer = await readFile(resolved.fullPath);
+      }
+      sceneFilename = `google_ai_${Date.now()}_${randomUUID().slice(0, 6)}.jpg`;
+      await writeFile(path.join(BGS, sceneFilename), buffer);
+      SCENES.push({
+        id: sceneFilename,
+        label: rawPrompt.slice(0, 40),
+        tag: `Google AI Living Video • ${category}`,
+        style: category,
+        category: category,
+        subcategory,
+        url: `/backgrounds/${sceneFilename}`,
+      });
+    }
+
+    const moodOverride = body.mood || CATEGORIES_DATA[category]?.defaultMood || "night";
+    const r = await generateFromMood({
+      prompt: rawPrompt,
+      seconds,
+      style: category,
+      moodOverride,
+      sceneOverride: sceneFilename,
+      aspectRatio,
+      resolution,
+      watermark: body.watermark || "Google AI Live Video",
+    });
+
+    return {
+      success: true,
+      id: r.id,
+      url: `/outputs/${r.id}/out.mp4`,
+      audioUrl: `/outputs/${r.id}/audio.wav`,
+      moodLabel: r.label,
+      bgScene: sceneFilename,
+      resolution: r.resolution,
+      dimensions: r.dimensions,
+      aspectRatio,
+      category,
+      subcategory,
     };
   });
 }
@@ -756,6 +1592,8 @@ async function handleHistory(req, res) {
           style: meta.style || "lofi",
           seconds: meta.seconds || 60,
           aspectRatio: meta.aspectRatio || "16:9",
+          resolution: meta.resolution || "1080p",
+          dimensions: meta.dimensions || "1920x1080",
           createdAt: meta.createdAt || mp4Stat.mtimeMs,
           size: mp4Stat.size,
           bgScene: meta.bgScene,
@@ -774,14 +1612,13 @@ async function handleHistory(req, res) {
 async function getActiveScenes() {
   const existing = [];
   for (const s of SCENES) {
-    if (s.id.startsWith("lofi_") || s.id.startsWith("anime_") || s.id.startsWith("pixar_")) {
+    try {
+      await stat(path.join(BGS, s.id));
       existing.push(s);
-    } else {
-      try {
-        await stat(path.join(BGS, s.id));
+    } catch {
+      // file missing on disk, fallback if core preset
+      if (s.id.startsWith("lofi_") || s.id.startsWith("anime_") || s.id.startsWith("pixar_")) {
         existing.push(s);
-      } catch {
-        // file no longer exists on disk, filter out
       }
     }
   }
@@ -845,6 +1682,10 @@ async function handleReferences(req, res, url) {
       lofi: catalog.filter((i) => i.category === "lofi").length,
       anime: catalog.filter((i) => i.category === "anime").length,
       pixar: catalog.filter((i) => i.category === "pixar").length,
+      devotional: catalog.filter((i) => i.category === "devotional").length,
+      cyberpunk: catalog.filter((i) => i.category === "cyberpunk").length,
+      nature: catalog.filter((i) => i.category === "nature").length,
+      simple_ai: catalog.filter((i) => i.category === "simple_ai").length,
     };
 
     sendJson(res, 200, { total, counts, items });
@@ -923,15 +1764,23 @@ const server = http.createServer(async (req, res) => {
     const scenes = await getActiveScenes();
     return sendJson(res, 200, { scenes });
   }
+  if (req.method === "GET" && url.pathname === "/api/categories") return handleCategories(req, res);
   if (req.method === "GET" && url.pathname === "/api/references") return handleReferences(req, res, url);
   if (req.method === "GET" && url.pathname === "/api/stock-videos") return handleStockVideos(req, res);
+  if (req.method === "GET" && url.pathname === "/api/google/status") return handleGoogleStatus(req, res);
+  if (req.method === "GET" && url.pathname === "/api/credits/status") return handleCreditsStatus(req, res);
 
   if (req.method === "POST" && url.pathname === "/api/generate") return handleGenerate(req, res);
+  if (req.method === "POST" && url.pathname === "/api/lyrics-video") return handleLyricsVideo(req, res);
   if (req.method === "POST" && url.pathname === "/api/from-youtube") return handleFromYoutube(req, res);
   if (req.method === "POST" && url.pathname === "/api/publish") return handlePublish(req, res);
   if (req.method === "POST" && url.pathname === "/api/slides") return handleSlides(req, res);
   if (req.method === "POST" && url.pathname === "/api/trim-silence") return handleTrimSilence(req, res);
   if (req.method === "POST" && url.pathname === "/api/upload-image") return handleUploadImage(req, res);
+  if (req.method === "POST" && url.pathname === "/api/render-image") return handleRenderImage(req, res);
+  if (req.method === "POST" && url.pathname === "/api/google/enhance-prompt") return handleGoogleEnhancePrompt(req, res);
+  if (req.method === "POST" && url.pathname === "/api/google/generate-image") return handleGoogleGenerateImage(req, res);
+  if (req.method === "POST" && url.pathname === "/api/google/generate-video") return handleGoogleGenerateVideo(req, res);
 
   if (req.method === "GET" && url.pathname.startsWith("/outputs/")) {
     const target = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));

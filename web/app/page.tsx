@@ -4,9 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import { ThemeToggle } from "./theme-toggle";
 import { ambientSound } from "./ambient-audio";
 
-type ToolId = "lofi-prompt" | "lofi-youtube" | "slides" | "trim";
-type Style = "lofi" | "anime" | "pixar";
+type ToolId = "lofi-prompt" | "lyrics" | "lofi-youtube" | "slides" | "trim";
+type Style = "lofi" | "anime" | "pixar" | "devotional" | "cyberpunk" | "nature" | "simple_ai";
+type Category = "all" | "devotional" | "anime" | "lofi" | "pixar" | "cyberpunk" | "nature" | "simple_ai";
 type AspectRatio = "16:9" | "9:16" | "1:1";
+type Resolution = "720p" | "1080p" | "2k" | "4k";
 
 type MoodInfo = {
   id: string;
@@ -21,13 +23,15 @@ type SceneInfo = {
   label: string;
   tag: string;
   style?: string;
+  category?: string;
+  subcategory?: string;
   url: string;
 };
 
 export type ReferenceItem = {
   id: string;
   title: string;
-  category: "lofi" | "anime" | "pixar";
+  category: string;
   filename: string;
   path: string;
   style: Style;
@@ -45,6 +49,8 @@ type Result = {
   bgScene?: string;
   removedSeconds?: number;
   aspectRatio?: AspectRatio;
+  resolution?: Resolution;
+  dimensions?: string;
   title?: string;
   sub?: string;
   seconds?: number;
@@ -53,21 +59,70 @@ type Result = {
   style?: string;
 };
 
-const STYLES: { id: Style; name: string; desc: string }[] = [
-  { id: "lofi", name: "Lofi Tape", desc: "Warm harmonic gradient, clean waveform & analog vinyl glow." },
-  { id: "anime", name: "Anime Cel", desc: "Vibrant Makoto Shinkai/Ghibli anime colors, high sharpness & cel lines." },
-  { id: "pixar", name: "Pixar Bloom", desc: "Volumetric 3D lighting, warm golden bloom & cinematic depth of field." },
+const RESOLUTION_OPTIONS: { id: Resolution; label: string; desc: string; badge: string; dimensions: string }[] = [
+  { id: "720p", label: "720p HD", desc: "Fast Preview & Web Streaming", badge: "Fast", dimensions: "1280x720" },
+  { id: "1080p", label: "1080p Full HD", desc: "High Definition Standard", badge: "Standard", dimensions: "1920x1080" },
+  { id: "2k", label: "2K QHD", desc: "Ultra Crisp Studio Fidelity", badge: "Crisp", dimensions: "2560x1440" },
+  { id: "4k", label: "4K UHD", desc: "Master Cinema Quality (Max Detail)", badge: "Cinema", dimensions: "3840x2160" },
+];
+
+const SUBCATEGORIES: { id: string; category: Category; name: string; icon: string; prompt: string; scene: string; mood: string; desc: string }[] = [
+  // Devotional
+  { id: "krishna_radha", category: "devotional", name: "Krishna & Radha Ocean Twilight", icon: "🪈", prompt: "Krishna and Radha sitting near the beach ocean shore listening to pleasant bansuri music, golden twilight", scene: "krishna_radha_beach.jpg", mood: "devotional_temple", desc: "Bansuri flute by ocean shore with floating lotus blooms" },
+  { id: "vedic_temple", category: "devotional", name: "Vedic Temple & Ghats", icon: "🪔", prompt: "Ancient sacred Vedic temple steps along holy river at golden sunrise with floating lotus diyas", scene: "devotional_vedic_ghats.jpg", mood: "devotional_temple", desc: "Holy river steps at dawn with glowing candle diyas" },
+  { id: "himalayan_shrine", category: "devotional", name: "Himalayan Peak Shrine", icon: "🏔️", prompt: "Sacred Himalayan temple shrine overlooking misty snow peaks under golden sunrise rays", scene: "devotional_himalayan_temple.jpg", mood: "devotional_temple", desc: "Ancient mountain monastery with golden sunbeams" },
+  { id: "sufi_mystic", category: "devotional", name: "Sufi Mystic Golden Glow", icon: "✨", prompt: "Mystical devotional sanctum with swirling golden dust particles, warm lanterns and divine peace", scene: "devotional_himalayan_temple.jpg", mood: "devotional_temple", desc: "Devotional trance with warm lanterns and spiritual peace" },
+  
+  // Anime
+  { id: "shinkai_sky", category: "anime", name: "Makoto Shinkai Sky", icon: "☁️", prompt: "Makoto Shinkai anime twilight train window with radiant sunset clouds and distant Tokyo tower", scene: "anime_shinkai_sunset.jpg", mood: "shinkai_anime", desc: "Vibrant clouds and golden twilight horizon" },
+  { id: "ghibli_garden", category: "anime", name: "Studio Ghibli Garden", icon: "🍃", prompt: "Studio Ghibli country cottage porch overlooking sunlit summer garden with butterflies and wildflowers", scene: "anime_ghibli_garden.jpg", mood: "ghibli_garden", desc: "Hand-painted porch with wildflower meadows" },
+  { id: "city_pop_retro", category: "anime", name: "Retro 90s City Pop", icon: "📻", prompt: "Retro 1990s Japanese anime aesthetic, pastel sunset over suburban Tokyo with cassette player on balcony", scene: "anime_retro_city_pop.jpg", mood: "shinkai_anime", desc: "Pastel Tokyo sunset with vintage cassette boombox" },
+  
+  // LoFi
+  { id: "study_desk", category: "lofi", name: "Classic Study Desk", icon: "🎧", prompt: "Rainy night study session with warm amber lamp light, sleeping cat and headphones", scene: "lofi_study_girl.jpg", mood: "night", desc: "LoFi girl with headphones, study desk and sleeping cat" },
+  { id: "rainy_cafe", category: "lofi", name: "Cozy Rainy Cafe", icon: "☕", prompt: "Cozy bookstore cafe with warm espresso, bookshelf rows and soft rain tapping against glass", scene: "lofi_rainy_cafe.jpg", mood: "lofi_cafe", desc: "Steaming coffee with Tokyo rain against window" },
+  { id: "sunset_balcony", category: "lofi", name: "Sunset Balcony & Vinyl", icon: "🌇", prompt: "Golden hour sunset balcony with vintage vinyl turntable and skyline silhouette", scene: "lofi_sunset_balcony.jpg", mood: "warm", desc: "Vinyl turntable and golden hour dusk" },
+  { id: "midnight_bedroom", category: "lofi", name: "Midnight Starlight Bedroom", icon: "🌙", prompt: "Celestial starry bedroom with glowing moon lamp, cozy blankets and distant city lights", scene: "lofi_starlight_bedroom.jpg", mood: "dreamy", desc: "Moon lamp and cosmic starlight through window" },
+
+  // Pixar
+  { id: "cozy_cabin", category: "pixar", name: "Fireplace Hearth Cabin", icon: "🪵", prompt: "Pixar 3D animated cozy winter cabin with hot cocoa, crackling fireplace and sleeping puppy", scene: "pixar_cozy_cabin.jpg", mood: "pixar_cozy", desc: "3D hearth warmth with hot cocoa and puppy" },
+  { id: "rooftop_stars", category: "pixar", name: "Rooftop Stargazing", icon: "🔭", prompt: "Pixar 3D animated rooftop with vintage brass telescope, cozy knit scarf and starlit city sky", scene: "pixar_rooftop_stars.jpg", mood: "dreamy", desc: "Brass telescope and starry night fairytale" },
+
+  // Cyberpunk
+  { id: "neon_rain", category: "cyberpunk", name: "Night City Neon Rain", icon: "🌧️", prompt: "Futuristic neon cyberpunk alley with ramen stall, glowing holographic signs and heavy rain reflections", scene: "cyberpunk_neon_rain.jpg", mood: "cyber_synthwave", desc: "Ramen stall neon reflections in wet asphalt" },
+  { id: "synthwave_grid", category: "cyberpunk", name: "Outrun 80s Grid", icon: "⚡", prompt: "Outrun synthwave digital wireframe grid with neon magenta sun and chrome sports car", scene: "lofi_tokyo_cyberpunk.jpg", mood: "cyber_synthwave", desc: "Neon wireframe grid with synthwave horizon" },
+
+  // Nature
+  { id: "biophilic_waterfall", category: "nature", name: "Sanctuary Waterfall", icon: "💧", prompt: "Biophilic glasshouse sanctuary with cascading waterfall, lush tropical ferns and sunbeams", scene: "nature_biophilic_waterfall.jpg", mood: "nature_sanctuary", desc: "Cascading glasshouse waterfall and sunbeams" },
+  { id: "bioluminescent_grove", category: "nature", name: "Bioluminescent Forest", icon: "🍄", prompt: "Mystical midnight forest with glowing bioluminescent turquoise stream and magical fireflies", scene: "nature_bioluminescent_forest.jpg", mood: "nature_sanctuary", desc: "Glowing turquoise river and dancing fireflies" },
+
+  // Simple AI
+  { id: "minimalist_lounge", category: "simple_ai", name: "Nordic Modernist Lounge", icon: "🪑", prompt: "Minimalist modern architecture lounge overlooking misty forest with clean lines and warm wood", scene: "simple_ai_minimal_lounge.jpg", mood: "simple_minimal", desc: "Architectural clean lines and misty pine forest" },
+  { id: "kinetic_geometry", category: "simple_ai", name: "Kinetic Geometric Flow", icon: "⚪", prompt: "Minimalist abstract 3D geometric ribbons and floating spheres in warm studio lighting", scene: "simple_ai_geometric_flow.jpg", mood: "simple_minimal", desc: "Floating 3D geometric ribbons and diffuse light" },
+];
+
+const STYLES: { id: Style; name: string; desc: string; badge: string }[] = [
+  { id: "devotional", name: "Devotional & Sacred", desc: "432Hz ethereal golden aura bloom, divine radiance & soul peace.", badge: "Sacred" },
+  { id: "anime", name: "Anime & Ghibli", desc: "Makoto Shinkai sky, hand-painted cel warmth, high sharpness & sakura bloom.", badge: "Cinematic" },
+  { id: "lofi", name: "LoFi Chill & Study", desc: "Cozy rainy tape warmth, vinyl crackle, gentle camera breath & Rhodes chords.", badge: "Classic" },
+  { id: "pixar", name: "Pixar 3D Cozy", desc: "3D animated volumetric lighting, warm golden bloom & nostalgic music box.", badge: "Storybook" },
+  { id: "cyberpunk", name: "Cyberpunk & Synth", desc: "Rainy Night City neon cyan/magenta pulse, analog saw bass & chromatic glide.", badge: "Retro Synth" },
+  { id: "nature", name: "Biophilic Nature", desc: "Lush emerald sanctuary, flowing woodland stream, sunbeams & gentle breeze.", badge: "Organic" },
+  { id: "simple_ai", name: "Simple AI & Minimal", desc: "Ultra-clean modern Ken Burns pan, high-contrast architecture & pure sine chill.", badge: "Modernist" },
 ];
 
 const PRESETS = [
-  { label: "Shinkai Twilight", prompt: "Makoto Shinkai anime twilight train window with radiant sunset clouds", mood: "shinkai_anime", style: "anime" as Style, scene: "anime_shinkai_sunset.jpg", seconds: 60 },
-  { label: "Pixar Fireplace", prompt: "Pixar 3D animated cozy winter cabin with hot cocoa and sleeping puppy", mood: "pixar_cozy", style: "pixar" as Style, scene: "pixar_cozy_cabin.jpg", seconds: 60 },
-  { label: "Ghibli Garden", prompt: "Studio Ghibli country cottage porch overlooking sunlit summer garden", mood: "ghibli_garden", style: "anime" as Style, scene: "anime_ghibli_garden.jpg", seconds: 60 },
-  { label: "Pixar Stargazing", prompt: "Pixar 3D animated rooftop with vintage telescope and fluffy white cat", mood: "dreamy", style: "pixar" as Style, scene: "pixar_rooftop_stars.jpg", seconds: 60 },
-  { label: "Rainy Study", prompt: "Rainy night study session with warm amber lamp light", mood: "night", style: "lofi" as Style, scene: "lofi_study_girl.jpg", seconds: 60 },
-  { label: "Cozy Cafe", prompt: "Cozy bookstore cafe with warm espresso and soft rain on glass", mood: "lofi_cafe", style: "lofi" as Style, scene: "lofi_rainy_cafe.jpg", seconds: 60 },
-  { label: "Midnight Tokyo", prompt: "Rainy midnight Tokyo ramen bar with neon sign reflections", mood: "cyberpunk", style: "lofi" as Style, scene: "lofi_tokyo_cyberpunk.jpg", seconds: 60 },
-  { label: "Golden Sunset", prompt: "Golden hour sunset walk with gentle warm breeze and nostalgic clouds", mood: "sunset", style: "lofi" as Style, scene: "lofi_sunset_balcony.jpg", seconds: 45 },
+  { label: "Sacred Himalayan Mandir", prompt: "A sacred Himalayan temple at golden sunrise with holy river and floating lotus diyas", mood: "devotional_temple", style: "devotional" as Style, scene: "devotional_himalayan_temple.jpg", seconds: 60, category: "devotional" },
+  { label: "Krishna & Radha Twilight", prompt: "Krishna and Radha sitting near the beach ocean shore listening to pleasant bansuri music", mood: "devotional_temple", style: "devotional" as Style, scene: "krishna_radha_beach.jpg", seconds: 60, category: "devotional" },
+  { label: "Shinkai Twilight", prompt: "Makoto Shinkai anime twilight train window with radiant sunset clouds", mood: "shinkai_anime", style: "anime" as Style, scene: "anime_shinkai_sunset.jpg", seconds: 60, category: "anime" },
+  { label: "Ghibli Garden", prompt: "Studio Ghibli country cottage porch overlooking sunlit summer garden", mood: "ghibli_garden", style: "anime" as Style, scene: "anime_ghibli_garden.jpg", seconds: 60, category: "anime" },
+  { label: "Rainy Study", prompt: "Rainy night study session with warm amber lamp light", mood: "night", style: "lofi" as Style, scene: "lofi_study_girl.jpg", seconds: 60, category: "lofi" },
+  { label: "Cozy Cafe", prompt: "Cozy bookstore cafe with warm espresso and soft rain on glass", mood: "lofi_cafe", style: "lofi" as Style, scene: "lofi_rainy_cafe.jpg", seconds: 60, category: "lofi" },
+  { label: "Pixar Fireplace", prompt: "Pixar 3D animated cozy winter cabin with hot cocoa and sleeping puppy", mood: "pixar_cozy", style: "pixar" as Style, scene: "pixar_cozy_cabin.jpg", seconds: 60, category: "pixar" },
+  { label: "Pixar Stargazing", prompt: "Pixar 3D animated rooftop with vintage telescope and fluffy white cat", mood: "dreamy", style: "pixar" as Style, scene: "pixar_rooftop_stars.jpg", seconds: 60, category: "pixar" },
+  { label: "Night City Cyber Rain", prompt: "Futuristic neon cyberpunk alley with ramen stall, glowing signs and heavy rain", mood: "cyber_synthwave", style: "cyberpunk" as Style, scene: "cyberpunk_neon_rain.jpg", seconds: 60, category: "cyberpunk" },
+  { label: "Biophilic Forest Waterfall", prompt: "Biophilic glasshouse sanctuary with cascading waterfall and tropical ferns", mood: "nature_sanctuary", style: "nature" as Style, scene: "nature_biophilic_waterfall.jpg", seconds: 60, category: "nature" },
+  { label: "Simple AI Zen Loft", prompt: "Minimalist modern architecture lounge overlooking misty forest with clean lines", mood: "simple_minimal", style: "simple_ai" as Style, scene: "simple_ai_minimal_lounge.jpg", seconds: 60, category: "simple_ai" },
 ];
 
 const GIF_PRESETS = [
@@ -92,18 +147,23 @@ export default function Home() {
   const [prompt, setPrompt] = useState("Rainy night study session with warm amber lamp light");
   const [mood, setMood] = useState<string>("night");
   const [moods, setMoods] = useState<MoodInfo[]>([]);
+  const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [scenesList, setScenesList] = useState<SceneInfo[]>([
-    { id: "lofi_study_girl.jpg", label: "Anime Study Desk", tag: "Classic Lofi Girl with headphones, rain & cat", style: "lofi", url: "/backgrounds/lofi_study_girl.jpg" },
-    { id: "anime_shinkai_sunset.jpg", label: "Shinkai Twilight Train", tag: "Makoto Shinkai vibrant clouds & Tokyo sunset", style: "anime", url: "/backgrounds/anime_shinkai_sunset.jpg" },
-    { id: "pixar_cozy_cabin.jpg", label: "Pixar Fireplace Cabin", tag: "3D animated cabin, hot cocoa & sleeping puppy", style: "pixar", url: "/backgrounds/pixar_cozy_cabin.jpg" },
-    { id: "anime_ghibli_garden.jpg", label: "Ghibli Summer Porch", tag: "Hand-painted cottage garden, iced tea & butterflies", style: "anime", url: "/backgrounds/anime_ghibli_garden.jpg" },
-    { id: "pixar_rooftop_stars.jpg", label: "Pixar Rooftop Stargazing", tag: "3D animated telescope, cozy scarf & starry night", style: "pixar", url: "/backgrounds/pixar_rooftop_stars.jpg" },
-    { id: "lofi_rainy_cafe.jpg", label: "Cozy Rainy Cafe", tag: "Warm coffee cup with steam & Tokyo rain", style: "lofi", url: "/backgrounds/lofi_rainy_cafe.jpg" },
-    { id: "lofi_tokyo_cyberpunk.jpg", label: "Tokyo Neon Alley", tag: "Rainy street, neon ramen bar & retro car", style: "lofi", url: "/backgrounds/lofi_tokyo_cyberpunk.jpg" },
-    { id: "lofi_sunset_balcony.jpg", label: "Sunset Balcony", tag: "Golden hour sunset & vinyl record player", style: "lofi", url: "/backgrounds/lofi_sunset_balcony.jpg" },
-    { id: "lofi_starlight_bedroom.jpg", label: "Starlight Galaxy", tag: "Celestial night sky, moon lamp & cozy bed", style: "lofi", url: "/backgrounds/lofi_starlight_bedroom.jpg" },
-    { id: "lofi_slow_morning.jpg", label: "Sunny Morning Room", tag: "Warm morning sunlight & acoustic guitar", style: "lofi", url: "/backgrounds/lofi_slow_morning.jpg" },
-    { id: "krishna_radha_beach.jpg", label: "Krishna & Radha Beach Twilight", tag: "Celestial flute melody by the ocean shore with lotus blooms", style: "anime", url: "/backgrounds/krishna_radha_beach.jpg" },
+    { id: "lofi_study_girl.jpg", label: "Anime Study Desk", tag: "Classic Lofi Girl with headphones, rain & cat", style: "lofi", category: "lofi", url: "/backgrounds/lofi_study_girl.jpg" },
+    { id: "anime_shinkai_sunset.jpg", label: "Shinkai Twilight Train", tag: "Makoto Shinkai vibrant clouds & Tokyo sunset", style: "anime", category: "anime", url: "/backgrounds/anime_shinkai_sunset.jpg" },
+    { id: "pixar_cozy_cabin.jpg", label: "Pixar Fireplace Cabin", tag: "3D animated cabin, hot cocoa & sleeping puppy", style: "pixar", category: "pixar", url: "/backgrounds/pixar_cozy_cabin.jpg" },
+    { id: "anime_ghibli_garden.jpg", label: "Ghibli Summer Porch", tag: "Hand-painted cottage garden, iced tea & butterflies", style: "anime", category: "anime", url: "/backgrounds/anime_ghibli_garden.jpg" },
+    { id: "pixar_rooftop_stars.jpg", label: "Pixar Rooftop Stargazing", tag: "3D animated telescope, cozy scarf & starry night", style: "pixar", category: "pixar", url: "/backgrounds/pixar_rooftop_stars.jpg" },
+    { id: "lofi_rainy_cafe.jpg", label: "Cozy Rainy Cafe", tag: "Warm coffee cup with steam & Tokyo rain", style: "lofi", category: "lofi", url: "/backgrounds/lofi_rainy_cafe.jpg" },
+    { id: "lofi_tokyo_cyberpunk.jpg", label: "Tokyo Neon Alley", tag: "Rainy street, neon ramen bar & retro car", style: "cyberpunk", category: "cyberpunk", url: "/backgrounds/lofi_tokyo_cyberpunk.jpg" },
+    { id: "cyberpunk_neon_rain.jpg", label: "Night City Cyberpunk Rain", tag: "Futuristic neon alley with ramen bar and rain reflections", style: "cyberpunk", category: "cyberpunk", url: "/backgrounds/cyberpunk_neon_rain.jpg" },
+    { id: "lofi_sunset_balcony.jpg", label: "Sunset Balcony", tag: "Golden hour sunset & vinyl record player", style: "lofi", category: "lofi", url: "/backgrounds/lofi_sunset_balcony.jpg" },
+    { id: "lofi_starlight_bedroom.jpg", label: "Starlight Galaxy", tag: "Celestial night sky, moon lamp & cozy bed", style: "lofi", category: "lofi", url: "/backgrounds/lofi_starlight_bedroom.jpg" },
+    { id: "lofi_slow_morning.jpg", label: "Sunny Morning Room", tag: "Warm morning sunlight & acoustic guitar", style: "lofi", category: "lofi", url: "/backgrounds/lofi_slow_morning.jpg" },
+    { id: "krishna_radha_beach.jpg", label: "Krishna & Radha Beach Twilight", tag: "Celestial flute melody by ocean shore with lotus blooms", style: "devotional", category: "devotional", url: "/backgrounds/krishna_radha_beach.jpg" },
+    { id: "devotional_himalayan_temple.jpg", label: "Himalayan Sacred Temple", tag: "Golden sunrise over sacred peaks with river lotus diyas", style: "devotional", category: "devotional", url: "/backgrounds/devotional_himalayan_temple.jpg" },
+    { id: "nature_biophilic_waterfall.jpg", label: "Biophilic Forest Waterfall", tag: "Cascading waterfall sanctuary with sunbeams and lush ferns", style: "nature", category: "nature", url: "/backgrounds/nature_biophilic_waterfall.jpg" },
+    { id: "simple_ai_minimal_lounge.jpg", label: "Simple AI Zen Architecture", tag: "Clean minimalist modernist lounge overlooking misty pines", style: "simple_ai", category: "simple_ai", url: "/backgrounds/simple_ai_minimal_lounge.jpg" },
   ]);
   const [selectedScene, setSelectedScene] = useState<string>("lofi_study_girl.jpg");
   const [previewMode, setPreviewMode] = useState<boolean>(true);
@@ -112,10 +172,10 @@ export default function Home() {
   const [referenceRepo, setReferenceRepo] = useState<ReferenceItem[]>([]);
   const [stockVideos, setStockVideos] = useState<any[]>([]);
   const [refRepoOpen, setRefRepoOpen] = useState(false);
-  const [refCategory, setRefCategory] = useState<"all" | "lofi" | "anime" | "pixar" | "videos">("all");
+  const [refCategory, setRefCategory] = useState<"all" | "lofi" | "anime" | "pixar" | "devotional" | "cyberpunk" | "nature" | "simple_ai" | "videos">("all");
   const [refSearch, setRefSearch] = useState("");
   const [selectedRef, setSelectedRef] = useState<ReferenceItem | null>(null);
-  const [refCounts, setRefCounts] = useState({ total: 300, lofi: 100, anime: 100, pixar: 100 });
+  const [refCounts, setRefCounts] = useState<any>({ total: 305, lofi: 100, anime: 100, pixar: 100, devotional: 2, cyberpunk: 1, nature: 1, simple_ai: 1 });
   
   // Custom Still Image Living Animator State
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -135,6 +195,44 @@ export default function Home() {
   const [watermark, setWatermark] = useState("");
   const [style, setStyle] = useState<Style>("lofi");
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("16:9");
+  const [resolution, setResolution] = useState<Resolution>("1080p");
+  const [activeSubCategory, setActiveSubCategory] = useState<string>("all");
+
+  // Fair Economics & Community Credits (Always Unlimited: 999999999 credits, 100% free)
+  const [dailyCredits, setDailyCredits] = useState({ remaining: 999999999, total: 999999999 });
+
+  // Strict Prompt Fidelity & Anti-Drift Motion Control
+  const [strictPromptAdherence, setStrictPromptAdherence] = useState(true);
+  const [negativePrompt, setNegativePrompt] = useState(
+    "looking into each other's faces, direct eye contact, face to face interaction, turning head toward camera, breaking pose, distorted fingers, morphed face"
+  );
+  const [cameraMotion, setCameraMotion] = useState<"gaze_locked" | "subtle_breath" | "slow_pan" | "zero_drift">("gaze_locked");
+  const [motionControlOpen, setMotionControlOpen] = useState(false);
+
+  // Synchronized On-Screen Lyrics Studio (Multilingual Telugu, Hindi, English)
+  const [lyricsEnabled, setLyricsEnabled] = useState(false);
+  const [lyricsText, setLyricsText] = useState(
+    "నిన్ను చూసిన వేళలో...\nమనసంతా నీదే కల...\nచేయి చేయి కలిపి నడుద్దాం...\nఈ మధుర క్షణాలు శాశ్వతం..."
+  );
+  const [lyricsPosition, setLyricsPosition] = useState<"bottom" | "center" | "top">("bottom");
+  const [lyricsFontSize, setLyricsFontSize] = useState<number>(28);
+  const [lyricsColor, setLyricsColor] = useState<string>("#ffffff");
+  const [customAudioDataUrl, setCustomAudioDataUrl] = useState<string | null>(null);
+  const [customAudioName, setCustomAudioName] = useState<string>("");
+
+  // Google AI Generator State
+  const [googleModalOpen, setGoogleModalOpen] = useState(false);
+  const [googleApiKey, setGoogleApiKey] = useState("");
+  const [googlePrompt, setGooglePrompt] = useState("Krishna and Radha sitting near the beach listening to pleasant bansuri music, radiant golden hour lighting, cinematic masterpiece");
+  const [googleCategory, setGoogleCategory] = useState<Category>("devotional");
+  const [googleSubCategory, setGoogleSubCategory] = useState<string>("krishna_radha");
+  const [googleResolution, setGoogleResolution] = useState<Resolution>("1080p");
+  const [googleAspectRatio, setGoogleAspectRatio] = useState<AspectRatio>("16:9");
+  const [googleGenerating, setGoogleGenerating] = useState(false);
+  const [googleGeneratedImage, setGoogleGeneratedImage] = useState<string | null>(null);
+  const [googleGeneratedVideo, setGoogleGeneratedVideo] = useState<Result | null>(null);
+  const [googleStatusText, setGoogleStatusText] = useState("");
+  const [googleKeyVisible, setGoogleKeyVisible] = useState(false);
 
   // Status & Results
   const [busy, setBusy] = useState(false);
@@ -164,8 +262,22 @@ export default function Home() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Load available moods, scenes, 300 references, and previous renders history
+  // Load available moods, scenes, 300 references, previous renders history, and Google API Key
   useEffect(() => {
+    try {
+      const savedKey = localStorage.getItem("google_api_key");
+      if (savedKey) setGoogleApiKey(savedKey);
+    } catch {}
+
+    fetch("/api/credits/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.creditsRemaining !== undefined) {
+          setDailyCredits({ remaining: data.creditsRemaining, total: data.dailyFreeCredits || 50 });
+        }
+      })
+      .catch(() => {});
+
     fetch("/api/moods")
       .then((r) => r.json())
       .then((data) => {
@@ -236,7 +348,7 @@ export default function Home() {
       .catch(() => {});
   }
 
-  // Real-time Canvas Particle Animation Engine (LoFi Rain, Anime Petals/Fireflies, Pixar Embers)
+  // Real-time Canvas Particle Animation Engine (LoFi, Anime, Pixar, Devotional, Cyberpunk, Nature, Simple AI)
   useEffect(() => {
     if (!liveAnimatorEnabled) return;
     const canvas = animatorCanvasRef.current;
@@ -256,16 +368,38 @@ export default function Home() {
     };
     window.addEventListener("resize", onResize);
 
-    const particles: { x: number; y: number; vx: number; vy: number; size: number; alpha: number }[] = [];
-    const count = style === "lofi" ? 45 : style === "anime" ? 35 : 25;
+    const particles: { x: number; y: number; vx: number; vy: number; size: number; alpha: number; angle: number; spin: number }[] = [];
+    const count =
+      style === "lofi" ? 45 :
+      style === "anime" ? 35 :
+      style === "devotional" ? 32 :
+      style === "cyberpunk" ? 42 :
+      style === "nature" ? 32 :
+      style === "simple_ai" ? 20 : 26;
+
     for (let i = 0; i < count; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: style === "anime" ? (Math.random() - 0.25) * 1.6 : (Math.random() - 0.5) * 0.4,
-        vy: style === "lofi" ? 3.5 + Math.random() * 4 : style === "pixar" ? -0.8 - Math.random() * 1.2 : 0.8 + Math.random() * 1.5,
-        size: style === "lofi" ? 1.5 : style === "pixar" ? 2.5 + Math.random() * 3 : 2 + Math.random() * 2.5,
+        vx: style === "anime" ? (Math.random() - 0.25) * 1.6 :
+            style === "nature" ? (Math.random() - 0.3) * 1.3 :
+            style === "devotional" ? (Math.random() - 0.5) * 0.7 :
+            (Math.random() - 0.5) * 0.4,
+        vy: style === "lofi" ? 3.5 + Math.random() * 4 :
+            style === "cyberpunk" ? 5.5 + Math.random() * 5 :
+            style === "devotional" ? -0.6 - Math.random() * 1.1 :
+            style === "pixar" ? -0.8 - Math.random() * 1.2 :
+            style === "nature" ? 0.9 + Math.random() * 1.6 :
+            0.5 + Math.random() * 1.1,
+        size: style === "lofi" ? 1.5 :
+              style === "devotional" ? 2.5 + Math.random() * 3.5 :
+              style === "pixar" ? 2.5 + Math.random() * 3 :
+              style === "cyberpunk" ? 1.5 + Math.random() * 2 :
+              style === "nature" ? 3 + Math.random() * 3.5 :
+              2 + Math.random() * 2.5,
         alpha: 0.35 + Math.random() * 0.6,
+        angle: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.05,
       });
     }
 
@@ -318,6 +452,80 @@ export default function Home() {
           p.y += p.vy;
           p.x += Math.sin(time + p.y * 0.02) * 0.7;
           if (p.y < -10) { p.y = height + 10; p.x = Math.random() * width; }
+          if (p.x > width) p.x = 0;
+          if (p.x < 0) p.x = width;
+        }
+      } else if (style === "devotional") {
+        // Ethereal golden lotus petals & sacred divine radiance
+        for (const p of particles) {
+          ctx.save();
+          p.angle += p.spin;
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(time * 1.5 + p.x));
+          ctx.fillStyle = "rgba(251, 191, 36, 0.9)";
+          ctx.shadowColor = "rgba(245, 158, 11, 0.95)";
+          ctx.shadowBlur = 14;
+          // Petal leaf shape
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.size * 1.6, p.size * 0.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          p.y += p.vy;
+          p.x += Math.sin(time + p.y * 0.015) * 0.6;
+          if (p.y < -15) { p.y = height + 15; p.x = Math.random() * width; }
+          if (p.x > width) p.x = 0;
+          if (p.x < 0) p.x = width;
+        }
+      } else if (style === "cyberpunk") {
+        // Neon digital matrix rain streaks & cyan/magenta pulse
+        ctx.lineWidth = 1.4;
+        for (const p of particles) {
+          const isCyan = (p.x | 0) % 2 === 0;
+          ctx.strokeStyle = isCyan ? "rgba(6, 182, 212, 0.85)" : "rgba(244, 63, 94, 0.85)";
+          ctx.shadowColor = ctx.strokeStyle;
+          ctx.shadowBlur = 9;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x, p.y + p.vy * 2.8);
+          ctx.stroke();
+          p.y += p.vy;
+          if (p.y > height) { p.y = -15; p.x = Math.random() * width; }
+        }
+      } else if (style === "nature") {
+        // Organic drifting emerald leaves & sunlit pollen motes
+        for (const p of particles) {
+          ctx.save();
+          p.angle += p.spin;
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.globalAlpha = p.alpha * (0.7 + 0.3 * Math.sin(time + p.x));
+          ctx.fillStyle = p.size > 4 ? "rgba(74, 222, 128, 0.85)" : "rgba(250, 204, 21, 0.8)";
+          ctx.shadowColor = "rgba(74, 222, 128, 0.6)";
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.size * 1.5, p.size * 0.7, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          p.x += p.vx + Math.sin(time + p.y * 0.02) * 0.8;
+          p.y += p.vy;
+          if (p.y > height + 10) { p.y = -10; p.x = Math.random() * width; }
+          if (p.x > width) p.x = 0;
+          if (p.x < 0) p.x = width;
+        }
+      } else if (style === "simple_ai") {
+        // Clean minimalist geometric focus particles
+        for (const p of particles) {
+          ctx.save();
+          ctx.globalAlpha = p.alpha * 0.6;
+          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 0.75, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          p.x += (Math.sin(time * 0.5 + p.y * 0.01) - 0.5) * 0.4;
+          p.y += p.vy * 0.7;
+          if (p.y > height) { p.y = -5; p.x = Math.random() * width; }
           if (p.x > width) p.x = 0;
           if (p.x < 0) p.x = width;
         }
@@ -471,8 +679,9 @@ export default function Home() {
           seconds,
           watermark: watermark.trim(),
           aspectRatio,
+          resolution,
         });
-        setStatus({ kind: "ok", text: "Rendered audio and video from YouTube source!" });
+        setStatus({ kind: "ok", text: `Rendered audio and video from YouTube source at ${resolution.toUpperCase()}!` });
       } else if (tool === "slides") {
         if (!scenes.trim()) throw new Error("Add at least one scene line.");
         data = await postJson("/api/slides", {
@@ -481,8 +690,9 @@ export default function Home() {
           scene: selectedScene,
           watermark: watermark.trim(),
           aspectRatio,
+          resolution,
         });
-        setStatus({ kind: "ok", text: `Rendered ${data.moodLabel} story slides!` });
+        setStatus({ kind: "ok", text: `Rendered ${data.moodLabel} story slides at ${resolution.toUpperCase()}!` });
       } else if (tool === "trim") {
         if (!result) throw new Error("Select or render a video first, then trim it.");
         const trimmed = await postJson<Result>("/api/trim-silence", { jobId: result.id });
@@ -490,6 +700,27 @@ export default function Home() {
         setStatus({ kind: "ok", text: `Trimmed! Removed ${(trimmed.removedSeconds ?? 0).toFixed(1)}s of silent gaps.` });
         loadHistory();
         return;
+      } else if (tool === "lyrics") {
+        if (!lyricsText.trim()) throw new Error("Please enter or paste at least one line of lyrics.");
+        data = await postJson("/api/lyrics-video", {
+          prompt: prompt.trim() || "Telugu Lyrics Video",
+          seconds,
+          style,
+          scene: selectedScene,
+          aspectRatio,
+          resolution,
+          watermark: watermark.trim(),
+          strictPromptAdherence,
+          cameraMotion,
+          lyrics: lyricsText.trim(),
+          lyricsStyle: {
+            position: lyricsPosition,
+            size: lyricsFontSize,
+            color: lyricsColor,
+          },
+          audioDataUrl: customAudioDataUrl,
+        });
+        setStatus({ kind: "ok", text: `Rendered synchronized on-screen lyrics video at ${resolution.toUpperCase()}!` });
       } else {
         if (!prompt.trim()) throw new Error("Enter a prompt describing your lofi mood.");
         data = await postJson("/api/generate", {
@@ -499,9 +730,20 @@ export default function Home() {
           mood,
           scene: selectedScene,
           aspectRatio,
+          resolution,
           watermark: watermark.trim(),
+          strictPromptAdherence,
+          negativePrompt: negativePrompt.trim(),
+          cameraMotion,
+          lyrics: lyricsEnabled ? lyricsText.trim() : undefined,
+          lyricsStyle: {
+            position: lyricsPosition,
+            size: lyricsFontSize,
+            color: lyricsColor,
+          },
+          audioDataUrl: customAudioDataUrl || undefined,
         });
-        setStatus({ kind: "ok", text: `Rendered with ${data.moodLabel} palette!` });
+        setStatus({ kind: "ok", text: `Rendered ${resolution.toUpperCase()} video with ${data.moodLabel} palette!` });
       }
       setResult(data);
       setPreviewMode(false);
@@ -514,6 +756,109 @@ export default function Home() {
       clearTimeout(t3);
       setBusy(false);
       setRenderStep(0);
+    }
+  }
+
+  // Export high-resolution still artwork (Full HD, 2K, 4K)
+  async function exportStillImage() {
+    try {
+      setStatus({ kind: "idle", text: `Rendering ${resolution.toUpperCase()} still artwork...` });
+      const data = await postJson<{ url: string; resolution: string; dimensions: string }>("/api/render-image", {
+        scene: selectedScene,
+        style,
+        resolution,
+        aspectRatio,
+        title: prompt.slice(0, 50),
+        watermark: watermark.trim(),
+      });
+      setStatus({ kind: "ok", text: `Exported ${data.resolution.toUpperCase()} (${data.dimensions}) masterpiece image!` });
+      const a = document.createElement("a");
+      a.href = data.url;
+      a.download = `lofi_studio_${data.resolution}_${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e: any) {
+      setStatus({ kind: "error", text: "Image export failed: " + e.message });
+    }
+  }
+
+  // Google AI Studio Actions
+  async function handleGoogleEnhancePrompt() {
+    if (!googlePrompt.trim()) return;
+    setGoogleStatusText("Enhancing prompt with Google Gemini 2.0 Flash...");
+    try {
+      const res = await postJson<{ success: boolean; enhanced: string; provider: string }>("/api/google/enhance-prompt", {
+        prompt: googlePrompt.trim(),
+        category: googleCategory,
+        subcategory: googleSubCategory,
+        apiKey: googleApiKey.trim(),
+      });
+      if (res.enhanced) {
+        setGooglePrompt(res.enhanced);
+        setGoogleStatusText(`Prompt enhanced via ${res.provider}!`);
+      }
+    } catch (e: any) {
+      setGoogleStatusText("Enhance notice: " + e.message);
+    }
+  }
+
+  async function handleGoogleGenerateImage() {
+    if (!googlePrompt.trim()) return;
+    setGoogleGenerating(true);
+    setGoogleStatusText("Generating artwork with Google Generative AI / Imagen 3...");
+    try {
+      const res = await postJson<any>("/api/google/generate-image", {
+        prompt: googlePrompt.trim(),
+        category: googleCategory,
+        subcategory: googleSubCategory,
+        resolution: googleResolution,
+        aspectRatio: googleAspectRatio,
+        apiKey: googleApiKey.trim(),
+        enhancePrompt: true,
+      });
+      if (res.url) {
+        setGoogleGeneratedImage(res.url);
+        setSelectedScene(res.filename);
+        setStyle(googleCategory as Style);
+        setScenesList((prev) => [res.scene, ...prev]);
+        setGoogleStatusText(`Success! Generated artwork via ${res.provider} at ${res.resolution.toUpperCase()}.`);
+        setStatus({ kind: "ok", text: `Google AI artwork activated as living scene!` });
+      }
+    } catch (e: any) {
+      setGoogleStatusText("Generation failed: " + e.message);
+    } finally {
+      setGoogleGenerating(false);
+    }
+  }
+
+  async function handleGoogleGenerateVideo() {
+    if (!googlePrompt.trim()) return;
+    setGoogleGenerating(true);
+    setGoogleStatusText("Synthesizing living video with Google Generative AI...");
+    try {
+      const res = await postJson<any>("/api/google/generate-video", {
+        prompt: googlePrompt.trim(),
+        category: googleCategory,
+        subcategory: googleSubCategory,
+        resolution: googleResolution,
+        aspectRatio: googleAspectRatio,
+        seconds,
+        apiKey: googleApiKey.trim(),
+        scene: googleGeneratedImage ? googleGeneratedImage.replace("/backgrounds/", "") : undefined,
+      });
+      if (res.id) {
+        setResult(res);
+        setPreviewMode(false);
+        setGoogleGeneratedVideo(res);
+        setGoogleStatusText(`Success! Rendered live video #${res.id} (${res.resolution.toUpperCase()} - ${res.dimensions}).`);
+        setStatus({ kind: "ok", text: `Rendered live video with Google AI at ${res.resolution.toUpperCase()}!` });
+        loadHistory();
+      }
+    } catch (e: any) {
+      setGoogleStatusText("Video synthesis failed: " + e.message);
+    } finally {
+      setGoogleGenerating(false);
     }
   }
 
@@ -644,6 +989,40 @@ export default function Home() {
             <span>Vault ({history.length})</span>
           </button>
 
+          {/* Google AI Studio Drawer Button */}
+          <button
+            type="button"
+            className="action-btn"
+            style={{
+              padding: "0.45rem 0.85rem",
+              fontSize: "0.82rem",
+              minWidth: "auto",
+              background: "linear-gradient(135deg, rgba(66, 133, 244, 0.22), rgba(219, 68, 85, 0.22))",
+              border: "1px solid #4285f4",
+              color: "var(--text)",
+              fontWeight: 700,
+            }}
+            onClick={() => setGoogleModalOpen(true)}
+            title="Generate AI images and living videos with Google Gemini & Imagen 3"
+          >
+            <span>✨ Google AI Studio</span>
+          </button>
+
+          {/* Unlimited Credits: 999999999 Always Unlimited & 100% Free Indicator */}
+          <div
+            className="credits-pill"
+            style={{
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(59, 130, 246, 0.22))",
+              borderColor: "var(--success)",
+              color: "#6ee7b7",
+            }}
+            title="Unlimited Credits Active: 999,999,999 credits. 100% Free, zero paywalls, zero restrictions."
+          >
+            <span style={{ fontSize: "0.85rem" }}>⚡</span>
+            <span style={{ fontWeight: 800 }}>{dailyCredits.remaining >= 999999999 ? "999,999,999" : dailyCredits.remaining.toLocaleString()} Credits</span>
+            <span style={{ color: "rgba(255, 255, 255, 0.75)", fontWeight: 600, fontSize: "0.72rem" }}>• UNLIMITED FREE</span>
+          </div>
+
           <ThemeToggle />
         </div>
       </header>
@@ -750,6 +1129,20 @@ export default function Home() {
             <button
               type="button"
               role="tab"
+              aria-selected={tool === "lyrics"}
+              className={`mode-tab-btn ${tool === "lyrics" ? "active" : ""}`}
+              onClick={() => setTool("lyrics")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+              <span>On-Screen Lyrics</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
               aria-selected={tool === "slides"}
               className={`mode-tab-btn ${tool === "slides" ? "active" : ""}`}
               onClick={() => setTool("slides")}
@@ -759,7 +1152,7 @@ export default function Home() {
                 <line x1="8" y1="21" x2="16" y2="21" />
                 <line x1="12" y1="17" x2="12" y2="21" />
               </svg>
-              <span>Lyric Slides</span>
+              <span>Story Slides</span>
             </button>
             <button
               type="button"
@@ -813,6 +1206,132 @@ export default function Home() {
                   placeholder="e.g. rainy night study session with warm lamp light"
                   onChange={(e) => setPrompt(e.target.value)}
                 />
+              </div>
+
+              {/* Strict Prompt Fidelity & Motion Drift Control */}
+              <div className="fidelity-card">
+                <div className="fidelity-header">
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "1.1rem" }}>🔒</span>
+                    <div>
+                      <strong style={{ fontSize: "0.88rem", display: "block" }}>
+                        Strict Prompt Fidelity & Motion Control
+                      </strong>
+                      <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                        Locks character gaze & poses (e.g. smiling downward without looking into each other&apos;s faces)
+                      </span>
+                    </div>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", fontSize: "0.8rem", fontWeight: 700 }}>
+                    <input
+                      type="checkbox"
+                      checked={strictPromptAdherence}
+                      onChange={(e) => setStrictPromptAdherence(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: "#8b5cf6" }}
+                    />
+                    <span>{strictPromptAdherence ? "Strict Lock: ON" : "Drift Free: OFF"}</span>
+                  </label>
+                </div>
+
+                {/* Motion Camera Preset Choice */}
+                <div>
+                  <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "0.35rem" }}>
+                    Camera Motion & Pose Locking
+                  </span>
+                  <div className="motion-preset-grid">
+                    <button
+                      type="button"
+                      className={`motion-preset-btn ${cameraMotion === "gaze_locked" ? "active" : ""}`}
+                      onClick={() => setCameraMotion("gaze_locked")}
+                    >
+                      <span>🔒 Gaze & Pose Locked</span>
+                      <span style={{ fontSize: "0.68rem", opacity: 0.75 }}>Micro-breath only, zero interaction drift</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`motion-preset-btn ${cameraMotion === "zero_drift" ? "active" : ""}`}
+                      onClick={() => setCameraMotion("zero_drift")}
+                    >
+                      <span>⏸ Stationary (0% Drift)</span>
+                      <span style={{ fontSize: "0.68rem", opacity: 0.75 }}>Static framing, maximum character hold</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`motion-preset-btn ${cameraMotion === "subtle_breath" ? "active" : ""}`}
+                      onClick={() => setCameraMotion("subtle_breath")}
+                    >
+                      <span>🌊 Subtle Breath</span>
+                      <span style={{ fontSize: "0.68rem", opacity: 0.75 }}>Gentle living atmosphere</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`motion-preset-btn ${cameraMotion === "slow_pan" ? "active" : ""}`}
+                      onClick={() => setCameraMotion("slow_pan")}
+                    >
+                      <span>🎥 Horizon Pan</span>
+                      <span style={{ fontSize: "0.68rem", opacity: 0.75 }}>Cinematic lateral camera drift</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Negative Prompting Input */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Negative Prompt (What to Avoid)
+                    </span>
+                    <button
+                      type="button"
+                      className="preset-chip"
+                      style={{ fontSize: "0.68rem", padding: "0.1rem 0.4rem" }}
+                      onClick={() =>
+                        setNegativePrompt(
+                          "looking into each other's faces, direct eye contact, face to face interaction, turning head toward camera, breaking pose, distorted fingers, morphed face"
+                        )
+                      }
+                    >
+                      Reset Defaults
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={negativePrompt}
+                    onChange={(e) => setNegativePrompt(e.target.value)}
+                    placeholder="e.g. looking into each other's faces, head turns, extra hands..."
+                    style={{
+                      width: "100%",
+                      fontSize: "0.8rem",
+                      padding: "0.45rem 0.7rem",
+                      borderRadius: 8,
+                      background: "rgba(0, 0, 0, 0.35)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text)",
+                    }}
+                  />
+                </div>
+
+                {/* Optional Inline Lyrics Toggle */}
+                <div style={{ paddingTop: "0.4rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.45rem", cursor: "pointer", fontSize: "0.82rem" }}>
+                    <input
+                      type="checkbox"
+                      checked={lyricsEnabled}
+                      onChange={(e) => setLyricsEnabled(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: "#10b981" }}
+                    />
+                    <span>Add Synchronized Lyrics / Subtitles to this video</span>
+                  </label>
+                  {lyricsEnabled && (
+                    <button
+                      type="button"
+                      className="preset-chip"
+                      style={{ fontSize: "0.72rem", padding: "0.15rem 0.5rem", color: "var(--success)" }}
+                      onClick={() => setTool("lyrics")}
+                    >
+                      Open Full Lyrics Editor ↗
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Harmonic Mood Selector */}
@@ -937,40 +1456,115 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="scene-grid">
-                  {scenesList.map((sc) => (
-                    <div
-                      key={sc.id}
-                      className={`scene-card ${selectedScene === sc.id ? "active" : ""}`}
-                      onClick={() => {
-                        setSelectedScene(sc.id);
-                        setPreviewMode(true);
-                      }}
-                      title={sc.tag}
-                    >
-                      <img
-                        src={sc.url}
-                        alt={sc.label}
-                        className="scene-thumb"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/backgrounds/lofi_study_girl.jpg";
+                {/* Category Filter Tabs */}
+                <div className="category-filter-bar">
+                  {[
+                    { id: "all", label: "✨ All Categories" },
+                    { id: "devotional", label: "🕉️ Devotional" },
+                    { id: "anime", label: "🌸 Anime" },
+                    { id: "lofi", label: "☕ LoFi" },
+                    { id: "pixar", label: "🧸 Pixar 3D" },
+                    { id: "cyberpunk", label: "⚡ Cyberpunk" },
+                    { id: "nature", label: "🌿 Nature" },
+                    { id: "simple_ai", label: "📐 Simple AI" },
+                  ].map((cat) => {
+                    const count = cat.id === "all" ? scenesList.length : scenesList.filter((s) => s.category === cat.id).length;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={`cat-pill ${activeCategory === cat.id ? "active" : ""}`}
+                        onClick={() => {
+                          setActiveCategory(cat.id as Category);
+                          setActiveSubCategory("all");
                         }}
-                      />
-                      <div className="scene-info">
-                        <div className="scene-title-row">
-                          <span className="scene-name">{sc.label}</span>
-                          {selectedScene === sc.id && <span className="scene-live-badge">Live</span>}
-                        </div>
-                        <span className="scene-tag">{sc.tag}</span>
-                        {sc.style && (
-                          <span className={`scene-style-tag ${sc.style}`}>
-                            {sc.style === "anime" ? "Anime" : sc.style === "pixar" ? "Pixar 3D" : "Lofi"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                      >
+                        <span>{cat.label}</span>
+                        <span style={{ opacity: 0.7, fontSize: "0.7rem" }}>({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Subcategories Filter Bar */}
+                <div className="subcategory-filter-bar">
+                  <button
+                    type="button"
+                    className={`subcat-pill ${activeSubCategory === "all" ? "active" : ""}`}
+                    onClick={() => setActiveSubCategory("all")}
+                  >
+                    <span>🌟 All Subcategories</span>
+                  </button>
+                  {SUBCATEGORIES.filter(
+                    (sub) => activeCategory === "all" || sub.category === activeCategory
+                  ).map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      className={`subcat-pill ${activeSubCategory === sub.id ? "active" : ""}`}
+                      onClick={() => {
+                        setActiveSubCategory(sub.id);
+                        setSelectedScene(sub.scene);
+                        if (sub.category !== "all") setStyle(sub.category as Style);
+                        if (sub.mood) setMood(sub.mood);
+                        if (sub.prompt) setPrompt(sub.prompt);
+                        setPreviewMode(true);
+                        setStatus({ kind: "ok", text: `Loaded subcategory preset: "${sub.name}"!` });
+                      }}
+                      title={sub.desc}
+                    >
+                      <span>{sub.icon}</span>
+                      <span>{sub.name}</span>
+                    </button>
                   ))}
+                </div>
+
+                <div className="scene-grid">
+                  {scenesList
+                    .filter((sc) => {
+                      if (activeCategory !== "all" && sc.category !== activeCategory) return false;
+                      if (activeSubCategory !== "all" && sc.subcategory && sc.subcategory !== activeSubCategory) return false;
+                      return true;
+                    })
+                    .map((sc) => (
+                      <div
+                        key={sc.id}
+                        className={`scene-card ${selectedScene === sc.id ? "active" : ""}`}
+                        onClick={() => {
+                          setSelectedScene(sc.id);
+                          if (sc.style) setStyle(sc.style as Style);
+                          setPreviewMode(true);
+                        }}
+                        title={sc.tag}
+                      >
+                        <img
+                          src={sc.url}
+                          alt={sc.label}
+                          className="scene-thumb"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/backgrounds/lofi_study_girl.jpg";
+                          }}
+                        />
+                        <div className="scene-info">
+                          <div className="scene-title-row">
+                            <span className="scene-name">{sc.label}</span>
+                            {selectedScene === sc.id && <span className="scene-live-badge">Live</span>}
+                          </div>
+                          <span className="scene-tag">{sc.tag}</span>
+                          {sc.style && (
+                            <span className={`scene-style-tag ${sc.style}`}>
+                              {sc.style === "anime" ? "Anime" :
+                               sc.style === "pixar" ? "Pixar 3D" :
+                               sc.style === "devotional" ? "Devotional" :
+                               sc.style === "cyberpunk" ? "Cyberpunk" :
+                               sc.style === "nature" ? "Nature" :
+                               sc.style === "simple_ai" ? "Simple AI" : "LoFi"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
 
@@ -986,13 +1580,227 @@ export default function Home() {
                       className={`style-card ${style === s.id ? "active" : ""}`}
                       onClick={() => handleStyleSelect(s.id)}
                     >
-                      <span className="style-name">{s.name}</span>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.2rem" }}>
+                        <span className="style-name">{s.name}</span>
+                        <span style={{ fontSize: "0.68rem", padding: "0.15rem 0.45rem", borderRadius: "999px", background: "var(--surface-hover)", color: "var(--accent)", fontWeight: 700 }}>
+                          {s.badge}
+                        </span>
+                      </div>
                       <span className="style-desc">{s.desc}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </>
+          )}
+
+          {/* Tool: Dedicated Synchronized On-Screen Lyrics Studio */}
+          {tool === "lyrics" && (
+            <div className="lyrics-studio-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span>🎵</span> Synchronized On-Screen Lyrics Studio
+                  </h3>
+                  <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                    Type or paste exact Telugu, Hindi, or English lyrics without Instagram spelling errors.
+                  </p>
+                </div>
+                {/* Language / Quick Presets */}
+                <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="preset-chip"
+                    onClick={() =>
+                      setLyricsText(
+                        "నిన్ను చూసిన వేళలో...\nమనసంతా నీదే కల...\nచేయి చేయి కలిపి నడుద్దాం...\nఈ మధుర క్షణాలు శాశ్వతం..."
+                      )
+                    }
+                    title="Load popular Telugu romantic melody lyrics preset"
+                  >
+                    🌸 Telugu Melody
+                  </button>
+                  <button
+                    type="button"
+                    className="preset-chip"
+                    onClick={() =>
+                      setLyricsText(
+                        "కృష్ణం వందే జగద్గురుమ్...\nరాధా మాధవ కుంజ విహారి...\nయమునా తీరమున వేణుగానం...\nదివ్య మంగళ స్వరూపం..."
+                      )
+                    }
+                    title="Load Telugu devotional sacred sloka preset"
+                  >
+                    🙏 Telugu Devotional
+                  </button>
+                  <button
+                    type="button"
+                    className="preset-chip"
+                    onClick={() =>
+                      setLyricsText(
+                        "Raindrops falling on the window glass...\nWatching the quiet midnight hours pass...\nWarm coffee, soft vinyl and endless dreams..."
+                      )
+                    }
+                    title="Load English Lo-Fi lyrics preset"
+                  >
+                    🎧 LoFi English
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Song / Audio File Upload */}
+              <div className="field">
+                <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>Custom Song Audio (Optional)</span>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                    {customAudioName ? `✓ ${customAudioName}` : "MP3, WAV, AAC, M4A"}
+                  </span>
+                </label>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <label
+                    className="preset-chip"
+                    style={{
+                      padding: "0.5rem 0.9rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                      background: customAudioDataUrl ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.05)",
+                      borderColor: customAudioDataUrl ? "var(--success)" : undefined,
+                    }}
+                  >
+                    <span>📁</span>
+                    <span>{customAudioDataUrl ? "Change Song File" : "Upload Custom Telugu Song"}</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCustomAudioName(file.name);
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            setCustomAudioDataUrl(ev.target?.result as string);
+                            setStatus({ kind: "ok", text: `Loaded custom song audio: ${file.name}` });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {customAudioDataUrl && (
+                    <button
+                      type="button"
+                      className="preset-chip"
+                      onClick={() => {
+                        setCustomAudioDataUrl(null);
+                        setCustomAudioName("");
+                      }}
+                      style={{ color: "var(--error)" }}
+                    >
+                      ✕ Remove
+                    </button>
+                  )}
+                  <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                    {customAudioDataUrl
+                      ? "Custom audio track active for video!"
+                      : "Leave empty to use built-in procedural lofi chords"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Lyrics Textarea */}
+              <div className="field">
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
+                  <label htmlFor="lyricsText" style={{ margin: 0 }}>
+                    Song Lyrics (Line-by-Line or Timed [MM:SS - MM:SS])
+                  </label>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                    {lyricsText.split("\n").filter(Boolean).length} lines • Auto-synced across {seconds}s
+                  </span>
+                </div>
+                <textarea
+                  id="lyricsText"
+                  rows={5}
+                  value={lyricsText}
+                  onChange={(e) => setLyricsText(e.target.value)}
+                  placeholder={"Type your Telugu or English lyrics here:\n\nనిన్ను చూసిన వేళలో...\nమనసంతా నీదే కల...\nచేయి చేయి కలిపి నడుద్దాం..."}
+                />
+              </div>
+
+              {/* Typography & Subtitle Layout Controls */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.8rem" }}>
+                <div className="field">
+                  <label>Subtitle Position</label>
+                  <div className="ratio-options">
+                    <button
+                      type="button"
+                      className={`ratio-btn ${lyricsPosition === "bottom" ? "active" : ""}`}
+                      onClick={() => setLyricsPosition("bottom")}
+                    >
+                      Bottom
+                    </button>
+                    <button
+                      type="button"
+                      className={`ratio-btn ${lyricsPosition === "center" ? "active" : ""}`}
+                      onClick={() => setLyricsPosition("center")}
+                    >
+                      Center
+                    </button>
+                    <button
+                      type="button"
+                      className={`ratio-btn ${lyricsPosition === "top" ? "active" : ""}`}
+                      onClick={() => setLyricsPosition("top")}
+                    >
+                      Top
+                    </button>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label>
+                    <span>Font Size ({lyricsFontSize}px)</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={20}
+                    max={48}
+                    step={2}
+                    value={lyricsFontSize}
+                    onChange={(e) => setLyricsFontSize(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Text Color</label>
+                  <div style={{ display: "flex", gap: "0.4rem" }}>
+                    {[
+                      { name: "White", val: "#ffffff" },
+                      { name: "Gold", val: "#fcd34d" },
+                      { name: "Cyan", val: "#67e8f9" },
+                      { name: "Sakura", val: "#f472b6" },
+                    ].map((c) => (
+                      <button
+                        key={c.val}
+                        type="button"
+                        className="preset-chip"
+                        style={{
+                          background: lyricsColor === c.val ? c.val : undefined,
+                          color: lyricsColor === c.val ? "#000" : undefined,
+                          borderColor: c.val,
+                          fontWeight: 700,
+                          fontSize: "0.75rem",
+                          padding: "0.2rem 0.55rem",
+                        }}
+                        onClick={() => setLyricsColor(c.val)}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Tool 2: YouTube Audio Remix */}
@@ -1107,6 +1915,32 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Output Resolution Selector (Full HD, 2K, 4K) */}
+              <div className="field">
+                <label>
+                  <span>Video & Image Resolution</span>
+                  <span style={{ fontSize: "0.72rem", color: "var(--accent)", fontWeight: 600 }}>
+                    {resolution === "4k" ? "Ultra HD 2160p Cinema" : resolution === "2k" ? "Quad HD 1440p Master" : resolution === "1080p" ? "Full HD 1080p Standard" : "HD 720p Fast"}
+                  </span>
+                </label>
+                <div className="resolution-options">
+                  {RESOLUTION_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={`resolution-btn ${resolution === opt.id ? "active" : ""}`}
+                      onClick={() => setResolution(opt.id)}
+                    >
+                      <span className="res-badge">{opt.badge}</span>
+                      <span className="res-name">{opt.name}</span>
+                      <span className="res-dim">
+                        {opt.id === "4k" ? "3840×2160" : opt.id === "2k" ? "2560×1440" : opt.id === "1080p" ? "1920×1080" : "1280×720"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Length Slider */}
               <div className="field">
                 <label htmlFor="seconds">
@@ -1156,35 +1990,86 @@ export default function Home() {
             </>
           )}
 
-          {/* Action CTA Button */}
-          <button
-            type="button"
-            className="cta-button"
-            disabled={busy}
-            onClick={generate}
-          >
-            {busy ? (
-              <>
-                <div className="step-indicator spinning" style={{ width: 18, height: 18 }} />
-                <span>Synthesizing Lofi Media...</span>
-              </>
-            ) : (
-              <>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-                <span>
-                  {tool === "trim"
-                    ? "Trim Silent Pauses"
-                    : tool === "lofi-youtube"
-                    ? "Render from YouTube Audio"
-                    : tool === "slides"
-                    ? "Render Story Slides"
-                    : "Generate Lofi Video"}
-                </span>
-              </>
-            )}
-          </button>
+          {/* Action CTA Buttons */}
+          <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="cta-button"
+              disabled={busy}
+              onClick={generate}
+              style={{ flex: "1 1 200px" }}
+            >
+              {busy ? (
+                <>
+                  <div className="step-indicator spinning" style={{ width: 18, height: 18 }} />
+                  <span>Synthesizing Lofi Media...</span>
+                </>
+              ) : (
+                <>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  <span>
+                    {tool === "trim"
+                      ? "Trim Silent Pauses"
+                      : tool === "lofi-youtube"
+                      ? "Render from YouTube Audio"
+                      : tool === "slides"
+                      ? "Render Story Slides"
+                      : `Generate ${resolution.toUpperCase()} Video`}
+                  </span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="preset-chip"
+              disabled={busy}
+              onClick={exportStillImage}
+              style={{
+                padding: "0.85rem 1.1rem",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border)",
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "var(--text)",
+                fontWeight: 600,
+                fontSize: "0.88rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+              title="Render and download high-resolution still image with current artwork and typography grade"
+            >
+              <span>📸 Export {resolution.toUpperCase()} Image</span>
+            </button>
+
+            <button
+              type="button"
+              className="preset-chip"
+              disabled={busy}
+              onClick={() => setGoogleModalOpen(true)}
+              style={{
+                padding: "0.85rem 1.1rem",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid rgba(139, 92, 246, 0.35)",
+                background: "rgba(139, 92, 246, 0.12)",
+                color: "#c4b5fd",
+                fontWeight: 600,
+                fontSize: "0.88rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+              title="Open Google Imagen 3 & Gemini AI Studio Generator"
+            >
+              <span>✨ Google AI Studio</span>
+            </button>
+          </div>
 
           {/* Render Step Feedback */}
           {busy && (
@@ -1265,6 +2150,11 @@ export default function Home() {
                   <>
                     <span>ID: #{result.id}</span>
                     {result?.aspectRatio && <span>{result.aspectRatio}</span>}
+                    {(result?.resolution || resolution) && (
+                      <span style={{ color: "var(--accent)", fontWeight: 700 }}>
+                        {(result?.resolution || resolution).toUpperCase()}
+                      </span>
+                    )}
                   </>
                 ) : (
                   <span style={{ color: "var(--accent)" }}>LIVE STAGE</span>
@@ -1406,6 +2296,45 @@ export default function Home() {
                       </div>
                     )}
                   </div>
+
+                  {/* Live Karaoke / Lyric Subtitle Preview Overlay */}
+                  {(lyricsEnabled || tool === "lyrics") && lyricsText && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        zIndex: 4,
+                        left: "6%",
+                        right: "6%",
+                        ...(lyricsPosition === "top"
+                          ? { top: 18 }
+                          : lyricsPosition === "center"
+                          ? { top: "50%", transform: "translateY(-50%)" }
+                          : { bottom: 18 }),
+                        display: "flex",
+                        justifyContent: "center",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "rgba(0, 0, 0, 0.82)",
+                          border: "1px solid rgba(255, 255, 255, 0.25)",
+                          borderRadius: 8,
+                          padding: "0.45rem 1rem",
+                          color: lyricsColor || "#ffffff",
+                          fontSize: `${Math.min(24, Math.max(14, lyricsFontSize))}px`,
+                          fontWeight: 700,
+                          textAlign: "center",
+                          boxShadow: "0 4px 18px rgba(0, 0, 0, 0.6)",
+                          maxWidth: "92%",
+                          whiteSpace: "pre-wrap",
+                          backdropFilter: "blur(6px)",
+                        }}
+                      >
+                        🎵 {lyricsText.split("\n").filter((l) => l.trim().length > 0)[0] || "Sample Lyric Line"}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1673,34 +2602,66 @@ export default function Home() {
                 </button>
                 <button
                   type="button"
-                  className={`ref-tab-btn ${refCategory === "lofi" ? "active" : ""}`}
-                  onClick={() => setRefCategory("lofi")}
+                  className={`ref-tab-btn ${refCategory === "devotional" ? "active" : ""}`}
+                  onClick={() => setRefCategory("devotional")}
                 >
-                  <span>🎧 Lofi Tape</span>
-                  <span style={{ opacity: 0.8 }}>({refCounts.lofi})</span>
+                  <span>🕉️ Devotional</span>
+                  <span style={{ opacity: 0.8 }}>({refCounts.devotional || 2})</span>
                 </button>
                 <button
                   type="button"
                   className={`ref-tab-btn ${refCategory === "anime" ? "active" : ""}`}
                   onClick={() => setRefCategory("anime")}
                 >
-                  <span>🌸 Anime & Ghibli</span>
+                  <span>🌸 Anime</span>
                   <span style={{ opacity: 0.8 }}>({refCounts.anime})</span>
+                </button>
+                <button
+                  type="button"
+                  className={`ref-tab-btn ${refCategory === "lofi" ? "active" : ""}`}
+                  onClick={() => setRefCategory("lofi")}
+                >
+                  <span>🎧 LoFi</span>
+                  <span style={{ opacity: 0.8 }}>({refCounts.lofi})</span>
                 </button>
                 <button
                   type="button"
                   className={`ref-tab-btn ${refCategory === "pixar" ? "active" : ""}`}
                   onClick={() => setRefCategory("pixar")}
                 >
-                  <span>✨ Pixar 3D</span>
+                  <span>🧸 Pixar</span>
                   <span style={{ opacity: 0.8 }}>({refCounts.pixar})</span>
+                </button>
+                <button
+                  type="button"
+                  className={`ref-tab-btn ${refCategory === "cyberpunk" ? "active" : ""}`}
+                  onClick={() => setRefCategory("cyberpunk")}
+                >
+                  <span>⚡ Cyberpunk</span>
+                  <span style={{ opacity: 0.8 }}>({refCounts.cyberpunk || 1})</span>
+                </button>
+                <button
+                  type="button"
+                  className={`ref-tab-btn ${refCategory === "nature" ? "active" : ""}`}
+                  onClick={() => setRefCategory("nature")}
+                >
+                  <span>🌿 Nature</span>
+                  <span style={{ opacity: 0.8 }}>({refCounts.nature || 1})</span>
+                </button>
+                <button
+                  type="button"
+                  className={`ref-tab-btn ${refCategory === "simple_ai" ? "active" : ""}`}
+                  onClick={() => setRefCategory("simple_ai")}
+                >
+                  <span>📐 Simple AI</span>
+                  <span style={{ opacity: 0.8 }}>({refCounts.simple_ai || 1})</span>
                 </button>
                 <button
                   type="button"
                   className={`ref-tab-btn ${refCategory === "videos" ? "active" : ""}`}
                   onClick={() => setRefCategory("videos")}
                 >
-                  <span>🎬 Stock Video Loops</span>
+                  <span>🎬 Stock Videos</span>
                   <span style={{ opacity: 0.8 }}>({stockVideos.length})</span>
                 </button>
               </div>
@@ -1961,6 +2922,346 @@ export default function Home() {
                   <span>🚀 Activate & Animate in Studio</span>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Google Generative AI Studio Modal (Gemini 2.0 & Imagen 3) */}
+      {googleModalOpen && (
+        <div className="google-modal-backdrop" onClick={() => setGoogleModalOpen(false)}>
+          <div className="google-modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="google-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <span style={{ fontSize: "1.4rem" }}>✨</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
+                    Google Generative AI Studio
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                    Direct Gemini 2.0 Flash prompt enhancement & Imagen 3 4K backdrop / living video synthesis
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="preset-chip"
+                style={{ fontSize: "1rem", padding: "0.2rem 0.6rem" }}
+                onClick={() => setGoogleModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="google-modal-body">
+              {/* Google API Key input */}
+              <div className="field">
+                <label htmlFor="google-api-key" style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Google AI Studio API Key (Gemini & Imagen)</span>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: "0.75rem", color: "var(--accent)", textDecoration: "underline" }}
+                  >
+                    Get Free Key ↗
+                  </a>
+                </label>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <input
+                    id="google-api-key"
+                    type={googleKeyVisible ? "text" : "password"}
+                    placeholder="AIzaSy... (Leave blank to use built-in procedural HD/4K generator)"
+                    value={googleApiKey}
+                    onChange={(e) => {
+                      setGoogleApiKey(e.target.value);
+                      try {
+                        localStorage.setItem("google_api_key", e.target.value);
+                      } catch {}
+                    }}
+                    style={{ flex: 1, fontFamily: "monospace", fontSize: "0.85rem" }}
+                  />
+                  <button
+                    type="button"
+                    className="preset-chip"
+                    onClick={() => setGoogleKeyVisible(!googleKeyVisible)}
+                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
+                  >
+                    {googleKeyVisible ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.2rem", display: "block" }}>
+                  * No key required: If no key is entered, high-fidelity procedural 4K renderers and mood palettes are automatically used.
+                </span>
+              </div>
+
+              {/* Category & Subcategory Selectors */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
+                <div className="field">
+                  <label>Category</label>
+                  <select
+                    value={googleCategory}
+                    onChange={(e) => {
+                      const cat = e.target.value as Category;
+                      setGoogleCategory(cat);
+                      const firstSub = SUBCATEGORIES.find((s) => s.category === cat);
+                      if (firstSub) {
+                        setGoogleSubCategory(firstSub.id);
+                        setGooglePrompt(firstSub.prompt);
+                      }
+                    }}
+                    style={{
+                      background: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text)",
+                      padding: "0.6rem 0.8rem",
+                      borderRadius: 8,
+                      width: "100%",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    <option value="devotional">🙏 Devotional (Vedic / Temples)</option>
+                    <option value="anime">🌸 Anime Aesthetic (Makoto / Ghibli)</option>
+                    <option value="lofi">🎧 Classic LoFi (Rain / Bedroom)</option>
+                    <option value="pixar">✨ Pixar 3D (Warm / Volumetric)</option>
+                    <option value="cyberpunk">🌆 Cyberpunk (Neon / Rain)</option>
+                    <option value="nature">🌿 Nature Zen (Forest / Water)</option>
+                    <option value="simple_ai">🎨 Simple AI (Minimal Flow)</option>
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>Subcategory Concept</label>
+                  <select
+                    value={googleSubCategory}
+                    onChange={(e) => {
+                      const subId = e.target.value;
+                      setGoogleSubCategory(subId);
+                      const found = SUBCATEGORIES.find((s) => s.id === subId);
+                      if (found) setGooglePrompt(found.prompt);
+                    }}
+                    style={{
+                      background: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text)",
+                      padding: "0.6rem 0.8rem",
+                      borderRadius: 8,
+                      width: "100%",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    {SUBCATEGORIES.filter((s) => s.category === googleCategory).map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Prompt Textarea + Gemini Enhance Button */}
+              <div className="field">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
+                  <label htmlFor="google-prompt" style={{ margin: 0 }}>Scene / Concept Prompt</label>
+                  <button
+                    type="button"
+                    className="preset-chip"
+                    onClick={handleGoogleEnhancePrompt}
+                    disabled={googleGenerating || !googlePrompt.trim()}
+                    style={{
+                      padding: "0.2rem 0.6rem",
+                      fontSize: "0.75rem",
+                      background: "rgba(139, 92, 246, 0.2)",
+                      borderColor: "rgba(139, 92, 246, 0.5)",
+                      color: "#c4b5fd",
+                      fontWeight: 600,
+                    }}
+                  >
+                    ✨ Gemini 2.0 Flash Enhance
+                  </button>
+                </div>
+                <textarea
+                  id="google-prompt"
+                  rows={3}
+                  value={googlePrompt}
+                  onChange={(e) => setGooglePrompt(e.target.value)}
+                  placeholder="Describe your desired scene, lighting, mood, elements..."
+                  style={{
+                    width: "100%",
+                    borderRadius: 8,
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text)",
+                    padding: "0.6rem 0.8rem",
+                    fontSize: "0.88rem",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              {/* Resolution & Aspect Ratio Settings */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
+                <div className="field">
+                  <label>Resolution Tier</label>
+                  <div className="resolution-options" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+                    {RESOLUTION_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className={`resolution-btn ${googleResolution === opt.id ? "active" : ""}`}
+                        onClick={() => setGoogleResolution(opt.id)}
+                        style={{ padding: "0.4rem 0.5rem" }}
+                      >
+                        <span className="res-badge" style={{ fontSize: "0.7rem" }}>{opt.badge}</span>
+                        <span className="res-name" style={{ fontSize: "0.75rem" }}>{opt.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label>Aspect Ratio</label>
+                  <div className="ratio-options">
+                    <button
+                      type="button"
+                      className={`ratio-btn ${googleAspectRatio === "16:9" ? "active" : ""}`}
+                      onClick={() => setGoogleAspectRatio("16:9")}
+                      style={{ padding: "0.4rem 0.5rem", fontSize: "0.78rem" }}
+                    >
+                      16:9
+                    </button>
+                    <button
+                      type="button"
+                      className={`ratio-btn ${googleAspectRatio === "9:16" ? "active" : ""}`}
+                      onClick={() => setGoogleAspectRatio("9:16")}
+                      style={{ padding: "0.4rem 0.5rem", fontSize: "0.78rem" }}
+                    >
+                      9:16
+                    </button>
+                    <button
+                      type="button"
+                      className={`ratio-btn ${googleAspectRatio === "1:1" ? "active" : ""}`}
+                      onClick={() => setGoogleAspectRatio("1:1")}
+                      style={{ padding: "0.4rem 0.5rem", fontSize: "0.78rem" }}
+                    >
+                      1:1
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="cta-button"
+                  disabled={googleGenerating || !googlePrompt.trim()}
+                  onClick={handleGoogleGenerateImage}
+                  style={{
+                    flex: "1 1 180px",
+                    background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                    padding: "0.75rem 1rem",
+                  }}
+                >
+                  {googleGenerating ? (
+                    <>
+                      <div className="step-indicator spinning" style={{ width: 16, height: 16 }} />
+                      <span>Generating with Google...</span>
+                    </>
+                  ) : (
+                    <span>🎨 Synthesize Imagen 3 Artwork</span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className="cta-button"
+                  disabled={googleGenerating || !googlePrompt.trim()}
+                  onClick={handleGoogleGenerateVideo}
+                  style={{
+                    flex: "1 1 180px",
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    padding: "0.75rem 1rem",
+                  }}
+                >
+                  {googleGenerating ? (
+                    <>
+                      <div className="step-indicator spinning" style={{ width: 16, height: 16 }} />
+                      <span>Synthesizing Live Video...</span>
+                    </>
+                  ) : (
+                    <span>🎬 Synthesize Full Live Video</span>
+                  )}
+                </button>
+              </div>
+
+              {/* Status Message */}
+              {googleStatusText && (
+                <div
+                  style={{
+                    padding: "0.6rem 0.8rem",
+                    borderRadius: 8,
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--border)",
+                    fontSize: "0.82rem",
+                    color: "var(--accent)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <span className="step-indicator spinning" style={{ width: 12, height: 12, display: googleGenerating ? "inline-block" : "none" }} />
+                  <span>{googleStatusText}</span>
+                </div>
+              )}
+
+              {/* Generated Image Preview */}
+              {googleGeneratedImage && (
+                <div
+                  style={{
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    border: "1px solid var(--border)",
+                    background: "#000",
+                    position: "relative",
+                  }}
+                >
+                  <img
+                    src={googleGeneratedImage}
+                    alt="Generated Artwork"
+                    style={{ width: "100%", maxHeight: 240, objectFit: "cover", display: "block" }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: 8,
+                      right: 8,
+                      display: "flex",
+                      gap: "0.4rem",
+                    }}
+                  >
+                    <a
+                      href={googleGeneratedImage}
+                      download="google_ai_artwork.jpg"
+                      className="preset-chip"
+                      style={{ background: "rgba(0, 0, 0, 0.75)", color: "#fff", textDecoration: "none" }}
+                    >
+                      💾 Download JPG
+                    </a>
+                    <button
+                      type="button"
+                      className="preset-chip"
+                      style={{ background: "var(--accent)", color: "#000", fontWeight: 700 }}
+                      onClick={() => {
+                        setSelectedScene(googleGeneratedImage.replace("/backgrounds/", ""));
+                        setGoogleModalOpen(false);
+                      }}
+                    >
+                      ✓ Applied to Stage
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

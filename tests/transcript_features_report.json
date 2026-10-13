@@ -1,0 +1,50 @@
+{
+  "credits_fair_economics": {
+    "passed": true,
+    "data": {
+      "plan": "Unlimited Creator Tier (Zero Paywall)",
+      "dailyFreeCredits": 999999999,
+      "creditsRemaining": 999999999,
+      "isUnlimited": true,
+      "isZeroPaywall": true,
+      "resetsInHours": 0,
+      "policy": {
+        "localGenerations": "100% UNLIMITED & FREE (999,999,999 credits, 0 consumed)",
+        "cloudAIImages": "100% UNLIMITED & FREE (999,999,999 credits available)",
+        "cloudAIVideos": "100% UNLIMITED & FREE (999,999,999 credits available)",
+        "resolutionSurcharge": "0 credits (4K, 2K, 1080p, 720p all 100% free)",
+        "failedGenerations": "Automatic instant refund guarantee",
+        "customLyricsAndAudio": "100% Free & Unlimited"
+      },
+      "message": "Unlimited Credits Mode permanently active: 999,999,999 credits. Zero restrictions, zero subscriptions."
+    }
+  },
+  "strict_prompt_fidelity": {
+    "passed": true,
+    "jobId": "96730b33",
+    "duration": 10.0
+  },
+  "telugu_lyrics_engine": {
+    "passed": true,
+    "jobId": "b22d5e2f",
+    "duration": 12.0,
+    "frame": "C:\\Users\\thann\\Downloads\\AntiGravity\\ClaudeLoFiGenerator\\screenshots\\test_lyrics_frame_b22d5e2f.jpg"
+  },
+  "style_presets": [
+    {
+      "style": "pixar",
+      "passed": true,
+      "jobId": "8f1619ce"
+    },
+    {
+      "style": "anime",
+      "passed": true,
+      "jobId": "885b612e"
+    },
+    {
+      "style": "devotional",
+      "passed": true,
+      "jobId": "96d90898"
+    }
+  ]
+}

@@ -1,5 +1,95 @@
 [
   {
+    "id": "simple_ai_001",
+    "title": "Simple AI Zen Architecture",
+    "category": "simple_ai",
+    "filename": "simple_ai_minimal_lounge.jpg",
+    "path": "/backgrounds/simple_ai_minimal_lounge.jpg",
+    "style": "simple_ai",
+    "mood": "simple_minimal",
+    "tags": [
+      "simple_ai",
+      "minimal",
+      "modern",
+      "zen",
+      "architecture",
+      "clean"
+    ],
+    "source": "Curated Studio Masterpiece"
+  },
+  {
+    "id": "nature_001",
+    "title": "Biophilic Forest Waterfall",
+    "category": "nature",
+    "filename": "nature_biophilic_waterfall.jpg",
+    "path": "/backgrounds/nature_biophilic_waterfall.jpg",
+    "style": "nature",
+    "mood": "nature_sanctuary",
+    "tags": [
+      "nature",
+      "waterfall",
+      "biophilic",
+      "sanctuary",
+      "solarpunk",
+      "forest"
+    ],
+    "source": "Curated Studio Masterpiece"
+  },
+  {
+    "id": "cyberpunk_001",
+    "title": "Night City Cyberpunk Rain",
+    "category": "cyberpunk",
+    "filename": "cyberpunk_neon_rain.jpg",
+    "path": "/backgrounds/cyberpunk_neon_rain.jpg",
+    "style": "cyberpunk",
+    "mood": "cyber_synthwave",
+    "tags": [
+      "cyberpunk",
+      "neon",
+      "rain",
+      "synthwave",
+      "ramen",
+      "future"
+    ],
+    "source": "Curated Studio Masterpiece"
+  },
+  {
+    "id": "devotional_002",
+    "title": "Himalayan Sacred Temple",
+    "category": "devotional",
+    "filename": "devotional_himalayan_temple.jpg",
+    "path": "/backgrounds/devotional_himalayan_temple.jpg",
+    "style": "devotional",
+    "mood": "devotional_temple",
+    "tags": [
+      "devotional",
+      "temple",
+      "himalaya",
+      "sacred",
+      "sunrise",
+      "ganga"
+    ],
+    "source": "Curated Studio Masterpiece"
+  },
+  {
+    "id": "devotional_001",
+    "title": "Krishna & Radha Beach Twilight",
+    "category": "devotional",
+    "filename": "krishna_radha_beach.jpg",
+    "path": "/backgrounds/krishna_radha_beach.jpg",
+    "style": "devotional",
+    "mood": "devotional_temple",
+    "tags": [
+      "devotional",
+      "krishna",
+      "radha",
+      "sacred",
+      "flute",
+      "divine"
+    ],
+    "source": "Curated Studio Masterpiece"
+  },
+  {
     "id": "lofi_001",
     "title": "Anime Pond",
     "category": "lofi",

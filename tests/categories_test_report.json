@@ -1,0 +1,96 @@
+{
+  "timestamp": "2026-10-13T21:03:28+0200",
+  "results": [
+    {
+      "category": "devotional",
+      "style": "devotional",
+      "job_id": "01d4effe",
+      "status": "PASSED",
+      "duration": 10.0,
+      "mp4_size_kb": 1861.4,
+      "wav_size_kb": 861.4,
+      "has_video": true,
+      "has_audio": true,
+      "render_time_sec": 9.95,
+      "mp4_path": "outputs\\01d4effe\\out.mp4"
+    },
+    {
+      "category": "anime",
+      "style": "anime",
+      "job_id": "72d71c12",
+      "status": "PASSED",
+      "duration": 10.0,
+      "mp4_size_kb": 1058.6,
+      "wav_size_kb": 861.4,
+      "has_video": true,
+      "has_audio": true,
+      "render_time_sec": 8.05,
+      "mp4_path": "outputs\\72d71c12\\out.mp4"
+    },
+    {
+      "category": "lofi",
+      "style": "lofi",
+      "job_id": "9939250e",
+      "status": "PASSED",
+      "duration": 10.0,
+      "mp4_size_kb": 3923.3,
+      "wav_size_kb": 861.4,
+      "has_video": true,
+      "has_audio": true,
+      "render_time_sec": 6.81,
+      "mp4_path": "outputs\\9939250e\\out.mp4"
+    },
+    {
+      "category": "pixar",
+      "style": "pixar",
+      "job_id": "52ef1218",
+      "status": "PASSED",
+      "duration": 10.0,
+      "mp4_size_kb": 2233.4,
+      "wav_size_kb": 861.4,
+      "has_video": true,
+      "has_audio": true,
+      "render_time_sec": 9.11,
+      "mp4_path": "outputs\\52ef1218\\out.mp4"
+    },
+    {
+      "category": "cyberpunk",
+      "style": "cyberpunk",
+      "job_id": "b470fb9c",
+      "status": "PASSED",
+      "duration": 10.0,
+      "mp4_size_kb": 9921.9,
+      "wav_size_kb": 861.4,
+      "has_video": true,
+      "has_audio": true,
+      "render_time_sec": 8.48,
+      "mp4_path": "outputs\\b470fb9c\\out.mp4"
+    },
+    {
+      "category": "nature",
+      "style": "nature",
+      "job_id": "bd84a92b",
+      "status": "PASSED",
+      "duration": 10.0,
+      "mp4_size_kb": 5583.2,
+      "wav_size_kb": 861.4,
+      "has_video": true,
+      "has_audio": true,
+      "render_time_sec": 8.3,
+      "mp4_path": "outputs\\bd84a92b\\out.mp4"
+    },
+    {
+      "category": "simple_ai",
+      "style": "simple_ai",
+      "job_id": "b2f43a63",
+      "status": "PASSED",
+      "duration": 10.0,
+      "mp4_size_kb": 820.1,
+      "wav_size_kb": 861.4,
+      "has_video": true,
+      "has_audio": true,
+      "render_time_sec": 6.32,
+      "mp4_path": "outputs\\b2f43a63\\out.mp4"
+    }
+  ]
+}
