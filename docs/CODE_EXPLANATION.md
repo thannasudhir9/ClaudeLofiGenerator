@@ -215,3 +215,90 @@ For environments without Node/Next build tooling, `public/index.html` offers a c
 - JavaScript client-side Web Audio API synthesizer.
 - Dynamic dropdown selectors for scenes, moods, and the 300 reference items.
 - Live progress polling bar and video player embed.
+
+---
+
+## 🔍 Studio Monitor State Synchronization Logic (`web/app/page.tsx`)
+
+### Problem Solved
+Previously, if a video was rendered or populated into state from history, the studio monitor remained frozen on `<video src={result.url}>` regardless of what inspiration chip, mood card, visual style, category tab, or scene card the user clicked.
+
+### Implementation Details
+
+#### 1. Decoupled History Fetching from Active Stage
+```typescript
+function loadHistory() {
+  fetch("/api/history")
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.items && Array.isArray(data.items)) {
+        setHistory(data.items);
+        // NOTE: setResult(data.items[0]) REMOVED to ensure initial state is LIVE STAGE
+      }
+    })
+    .catch(() => {});
+}
+```
+
+#### 2. Atomic Selection Reset Handlers
+Every selection action dispatches `setPreviewMode(true)` and `setResult(null)`:
+```typescript
+// Inspiration Presets
+function applyPreset(p: (typeof PRESETS)[0]) {
+  setPrompt(p.prompt);
+  setMood(p.mood);
+  if (p.scene) setSelectedScene(p.scene);
+  if (p.style) setStyle(p.style);
+  setSeconds(p.seconds);
+  setTitle(p.label + " Lofi Mix");
+  setPreviewMode(true);
+  setResult(null);
+  setStatus({ kind: "ok", text: `Loaded inspiration preset: "${p.label}"!` });
+}
+
+// Mood Selection with Category Pairings
+function selectMood(mId: string) {
+  setMood(mId);
+  if (moodSceneMap[mId]) {
+    setSelectedScene(moodSceneMap[mId].scene);
+    if (moodSceneMap[mId].style) setStyle(moodSceneMap[mId].style!);
+  }
+  setPreviewMode(true);
+  setResult(null);
+}
+
+// Visual Style Selection
+function handleStyleSelect(sId: Style) {
+  setStyle(sId);
+  if (styleSceneMap[sId]) setSelectedScene(styleSceneMap[sId]);
+  setPreviewMode(true);
+  setResult(null);
+}
+```
+
+#### 3. Deck Header Dismiss Button
+```tsx
+{result && (
+  <div style={{ display: "flex", gap: "0.3rem", marginLeft: "0.3rem" }}>
+    <button
+      type="button"
+      className="preset-chip"
+      onClick={() => setPreviewMode(!previewMode)}
+      title="Toggle between rendered video and selected background artwork stage"
+    >
+      {previewMode ? "▶ Watch Video" : "🖼 Scene Stage"}
+    </button>
+    <button
+      type="button"
+      className="preset-chip"
+      onClick={() => {
+        setResult(null);
+        setPreviewMode(true);
+      }}
+      title="Clear video and design a new scene"
+    >
+      ✕ New Scene
+    </button>
+  </div>
+)}
+```

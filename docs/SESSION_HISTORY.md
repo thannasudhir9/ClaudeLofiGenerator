@@ -371,5 +371,44 @@ Conducted in-depth web research on top trending ambient and aesthetic video cate
      - `screenshots/18_lyrics_studio_telugu.png`
    - Verified 100% test pass rate across both test suites.
 
+---
 
+### Prompt 14: Studio Monitor Chair Video Freeze Bug Resolution & Test Engine Modernization
+**Timestamp**: `2026-10-13T21:35:00+02:00`
+**User Request**:
+> *"update all documentation , design , architecture, session infor, commands, features, bugs and all other .md files accordingly*  
+> *update testing engine*  
+> *I see there is an issue whatever I select , i see only this chair video lofi video only - fix it"*
+
+#### Engineering Implementations
+1. **Diagnosis of Studio Monitor Freeze**:
+   - Diagnosed that `loadHistory()` in `web/app/page.tsx` was calling `if (data.items.length > 0 && !result) setResult(data.items[0])` on initial mount, immediately locking the UI to the latest rendered video (`#b2f43a63` "Simple AI minimalist modern zen lounge" chair video).
+   - In addition, selection handlers (`selectMood`, `handleStyleSelect`, `cat-pill`, `subcat-pill`, `scene-card`, `selectReferenceAsset`, and `resetRef`) did not reset `setResult(null)` and `setPreviewMode(true)`. The monitor stayed frozen on the chair video regardless of user clicks.
+2. **Comprehensive Studio Monitor State Synchronization**:
+   - Removed `setResult(data.items[0])` on mount from `loadHistory()`. Initial page load now cleanly renders `LIVE STAGE` with active aesthetic artwork and particle animator.
+   - Synchronized all 7 selection pipelines with `setPreviewMode(true); setResult(null);`:
+     - Inspiration presets (`applyPreset`)
+     - Harmonic mood cards (`selectMood`) with automatic artwork & style pairing
+     - Visual style buttons (`handleStyleSelect`) with automatic iconic scene pairing
+     - Category filter pills (`cat-pill`) with default category scene, style, prompt, and mood auto-selection
+     - Subcategory pills (`subcat-pill`) with scene, style, prompt, and mood loading
+     - Scene cards in the grid (`scene-card`)
+     - Reference assets drawer selection (`selectReferenceAsset`)
+     - Reference scene Reset button
+     - Custom image upload & Google Generative AI artwork activation
+   - Added `[✕ New Scene]` button in the Studio Monitor deck header alongside `[▶ Watch Video / 🖼 Scene Stage]` toggle, allowing creators to dismiss rendered videos with 1 click.
+3. **Automated Test Engine Upgrade**:
+   - Created `tests/test_selection_and_monitor.py` utilizing Playwright E2E:
+     - Confirms initial load opens cleanly on `LIVE STAGE` (zero `#b2f43a63` chair video).
+     - Tests all 6 quick aesthetic inspiration chips with instant backdrop updates.
+     - Tests all 7 category pills (Devotional, Anime, Pixar 3D, Cyberpunk, Nature, Simple AI, LoFi) with instant backdrop and style updates.
+     - Tests subcategory pill ("Studio Ghibli Garden") with instant backdrop update.
+     - Tests scene card click ("Tokyo Neon Alley") with instant backdrop update.
+     - Validates unlimited credits pill (999,999,999) visible and free.
+     - Confirms 0 console errors and saves screenshot `tests/monitor_selection_verified.png`.
+   - Executed test suites:
+     - `test_transcript_features.py`: 100% PASS (4/4 tests)
+     - `test_selection_and_monitor.py`: 100% PASS (7/7 categories & selections)
+4. **Documentation Overhaul Across All .md Files**:
+   - Updated `README.md`, `docs/ARCHITECTURE.md`, `docs/BUGS_AND_FIXES.md`, `docs/SESSION_HISTORY.md`, `docs/CODE_EXPLANATION.md`, `docs/TEST_REPORT.md`, `docs/FUTURE_SCOPE.md`, `web/README.md`, and `web/AGENTS.md` with current timestamp `October 13, 2026 — 21:35:00 CEST (UTC+2)`.
 

@@ -36,5 +36,7 @@ web/.env*.local
 Thumbs.db
 desktop.ini
 
-# Temporary scratch files
+# Temporary scratch files & process locks
 scratch/
+.pids/
+logs/

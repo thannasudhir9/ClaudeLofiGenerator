@@ -34,3 +34,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## 🎛️ Studio Monitor Selection Lifecycle & State Management
+- **Live Stage Mode**: Triggered on initial load and every preset/category/mood/scene selection. Displays active background artwork with real-time HTML5 canvas particle physics.
+- **Rendered Video Mode**: Triggered upon generation completion or Vault "Load & Play".
+- **Dismiss Action**: Users can click `✕ New Scene` in the deck header at any time to unload videos.
+- **Unlimited Credits**: Permanently set to 999,999,999 with zero resolution paywalls.

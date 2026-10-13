@@ -21,30 +21,30 @@
   },
   "strict_prompt_fidelity": {
     "passed": true,
-    "jobId": "96730b33",
+    "jobId": "32b4adef",
     "duration": 10.0
   },
   "telugu_lyrics_engine": {
     "passed": true,
-    "jobId": "b22d5e2f",
+    "jobId": "360faedb",
     "duration": 12.0,
-    "frame": "C:\\Users\\thann\\Downloads\\AntiGravity\\ClaudeLoFiGenerator\\screenshots\\test_lyrics_frame_b22d5e2f.jpg"
+    "frame": "C:\\Users\\thann\\Downloads\\AntiGravity\\ClaudeLoFiGenerator\\screenshots\\test_lyrics_frame_360faedb.jpg"
   },
   "style_presets": [
     {
       "style": "pixar",
       "passed": true,
-      "jobId": "8f1619ce"
+      "jobId": "9aeaa5d8"
     },
     {
       "style": "anime",
       "passed": true,
-      "jobId": "885b612e"
+      "jobId": "5ce6c4cc"
     },
     {
       "style": "devotional",
       "passed": true,
-      "jobId": "96d90898"
+      "jobId": "7479c121"
     }
   ]
 }

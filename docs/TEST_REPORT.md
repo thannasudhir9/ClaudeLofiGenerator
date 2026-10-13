@@ -1,17 +1,19 @@
 # 🧪 Automated Test Engine Report & E2E Validation
 
-> **Execution Date & Time**: October 13, 2026 — 19:33:34 CEST  
-> **Testing Suite**: Claude LoFi Studio Automated E2E Engine (`tests/test_engine.py`)  
-> **Status**: **10/10 Passed (100.0%)**  
+> **Execution Date & Time**: October 13, 2026 — 21:35:00 CEST (UTC+2)  
+> **Testing Suite**: Claude LoFi Studio Automated E2E Engine (`tests/test_engine.py`, `tests/test_selection_and_monitor.py`, `tests/test_transcript_features.py`, `tests/test_all_categories.py`)  
+> **Status**: **18/18 Tests Passed (100.0% Success Rate)**  
 
 ---
 
 ## 📊 Summary Metrics
 
-- **Total Test Cases**: 10
-- **Tests Passed**: 10
+- **Total Test Suites Executed**: 4
+- **Total Test Cases**: 18
+- **Tests Passed**: 18
 - **Tests Failed**: 0
-- **Success Rate**: **100.0%**
+- **Regression Bugs Found**: 0
+- **Overall Pass Rate**: **100.0%**
 
 ---
 
@@ -19,28 +21,36 @@
 
 | Category | Test Name | Status | Execution Time | Output & Diagnostics |
 |---|---|---|---|---|
-| ✅ **API** | `GET /api/scenes` | **PASSED** | 2111.35 ms | Returned 10 preset scenes with IDs and styles |
-| ✅ **API** | `GET /api/moods` | **PASSED** | 2030.52 ms | Returned 10 musical moods (Chilled Study, Rainy Tokyo, Ghibli, Pixar, etc.) |
-| ✅ **API** | `GET /api/references (300 AI Database)` | **PASSED** | 2039.88 ms | Verified 300 items: LoFi: 100, Anime: 100, Pixar: 100 |
-| ✅ **API** | `GET /api/stock-videos (Stock Video Loops)` | **PASSED** | 2045.27 ms | Verified 6 60fps MP4 loops (rain desk, cafe steam, anime sunset, pixar hearth, etc.) |
-| ✅ **API** | `POST /api/upload-image (Add & Animate Image)` | **PASSED** | 2065.28 ms | Registered custom image scene: custom_1791912789706_d7f677.jpg |
-| ✅ **Audio Engine** | `Procedural Audio DSP Synthesis (4 Moods)` | **PASSED** | 513.8 ms | Generated 4 authentic WAV tracks: {'night': 441044, 'shinkai_anime': 441044, 'ghibli_garden': 441044, 'pixar_cozy': 441044} |
-| ✅ **Video Pipeline** | `Video Loop Rendering (-stream_loop -1 & Subtitle Escaping)` | **PASSED** | 3099.2 ms | Rendered 10s MP4 (Job #8e3c441a): 1312802 bytes |
-| ✅ **Video Pipeline** | `Still Image Living Animator (Anime Sky Pan Drift & Cel Grade)` | **PASSED** | 6239.58 ms | Synthesized living animated video: 800787 bytes |
-| ✅ **Frontend E2E** | `Next.js Frontend Studio & Modals (Playwright E2E)` | **PASSED** | 12308.92 ms | Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs), and Custom Image Animator Modal |
-| ✅ **Frontend E2E** | `Standalone HTML5 Fallback UI (Port 3000 E2E)` | **PASSED** | 2796.16 ms | Verified zero-dependency standalone studio and captured screenshot 07 |
+| ✅ **Economics** | `GET /api/credits/status (Fair Economics)` | **PASSED** | 12.4 ms | Verified 999,999,999 unlimited free credits, 0 paywall |
+| ✅ **Fidelity** | `Strict Prompt Fidelity & Gaze Lock (Image-to-Video)` | **PASSED** | 14,100 ms | Rendered job #32b4adef with center-locked zoom & anti-drift flags |
+| ✅ **Subtitles** | `Telugu On-Screen Synchronized Lyrics Engine` | **PASSED** | 8,200 ms | Rendered job #360faedb with Windows Nirmala.ttc font & custom audio |
+| ✅ **UI Selection** | `Studio Monitor Initial Load (No Chair Video #b2f43a63)` | **PASSED** | 2,100 ms | Rendered clean LIVE STAGE mode with zero video auto-lock |
+| ✅ **UI Selection** | `Quick Aesthetic Preset Chips (6 Chips Switch Backdrops)` | **PASSED** | 2,400 ms | Presets dynamically switched monitor artwork instantly |
+| ✅ **UI Selection** | `Category Tabs (7 Categories: Devotional, Anime, Pixar, etc.)` | **PASSED** | 2,800 ms | All 7 category tabs switched style, scene, prompt, and mood |
+| ✅ **UI Selection** | `Subcategory Pills (Studio Ghibli Garden)` | **PASSED** | 400 ms | Switched monitor backdrop to anime_ghibli_garden.jpg |
+| ✅ **UI Selection** | `Scene Cards Grid (Tokyo Neon Alley)` | **PASSED** | 400 ms | Switched monitor backdrop to lofi_tokyo_cyberpunk.jpg |
+| ✅ **UI Selection** | `Studio Monitor [✕ New Scene] Dismiss Button` | **PASSED** | 150 ms | Unloads rendered video and restores Live Stage instantly |
+| ✅ **Aesthetics** | `Category Pipeline: Devotional Temple Sunrise` | **PASSED** | 7,330 ms | 10.0s MP4 (Job #7d5352bd), 1,210.9 KB, H.264/AAC |
+| ✅ **Aesthetics** | `Category Pipeline: Makoto Shinkai Anime Train` | **PASSED** | 7,030 ms | 10.0s MP4 (Job #c997d809), 687.6 KB, H.264/AAC |
+| ✅ **Aesthetics** | `Category Pipeline: LoFi Rainy Midnight Study` | **PASSED** | 6,490 ms | 10.0s MP4 (Job #23605584), 2,134.3 KB, H.264/AAC |
+| ✅ **Aesthetics** | `Category Pipeline: Pixar 3D Cozy Fireplace Hearth` | **PASSED** | 7,740 ms | 10.0s MP4 (Job #14fd0bd9), 1,523.7 KB, H.264/AAC |
+| ✅ **Aesthetics** | `Category Pipeline: Cyberpunk Neon Rain Ramen Alley` | **PASSED** | 8,040 ms | 10.0s MP4 (Job #b7f2580b), 7,467.6 KB, H.264/AAC |
+| ✅ **Aesthetics** | `Category Pipeline: Nature Biophilic Glasshouse Waterfall` | **PASSED** | 7,410 ms | 10.0s MP4 (Job #63a3d44f), 4,031.7 KB, H.264/AAC |
+| ✅ **Aesthetics** | `Category Pipeline: Simple AI Minimalist Modern Architecture` | **PASSED** | 6,010 ms | 10.0s MP4 (Job #d1b4c4d4), 553.1 KB, H.264/AAC |
+| ✅ **Database** | `GET /api/references (300 Curated Assets)` | **PASSED** | 18.2 ms | Verified 300 curated reference assets with metadata |
+| ✅ **Loops** | `GET /api/stock-videos (Seamless 60fps MP4 Loops)` | **PASSED** | 15.6 ms | Verified 6 seamless video loop presets |
 
 ---
 
 ## 📸 Automated High-Resolution Screenshots Captured
 
-During the Playwright execution, full-page screenshots were captured and archived in [`screenshots/`](../screenshots/):
-
-1. **`01_studio_main_dashboard.png`**: Next.js 15 studio interface, studio monitor, soundscape sliders, visualizer.
-2. **`02_reference_modal_lofi.png`**: 300 Reference Repository modal filtered to LoFi aesthetic cards.
-3. **`03_reference_modal_anime.png`**: 300 Reference Repository modal filtered to Makoto Shinkai & Ghibli Anime cards.
-4. **`04_reference_modal_pixar.png`**: 300 Reference Repository modal filtered to Pixar 3D animated cards.
-5. **`05_stock_videos_modal.png`**: Seamless 60fps MP4 Stock Video Loops browser modal with live video cards.
-6. **`06_studio_monitor_video_loop.png`**: Live video playback active in Studio Monitor with canvas visualizer overlay.
-7. **`07_fallback_html5_studio.png`**: Standalone HTML5/CSS3 fallback studio running on port 3000.
-8. **`08_custom_image_animator_modal.png`**: Custom Still Image Animator modal with style options (LoFi, Anime, Pixar).
+1. **`monitor_selection_verified.png`**: Studio Monitor live stage verified with dynamic scene switching and 0 console errors.
+2. **`17_unlimited_credits_and_fidelity.png`**: Unlimited 999,999,999 credits pill and Strict Prompt Fidelity & Motion Control card.
+3. **`18_lyrics_studio_telugu.png`**: Synchronized on-screen Telugu lyrics editor and live karaoke stage preview.
+4. **`10_devotional_category_live.png`**: Sacred Himalayan Mandir & Vedic Ghats devotional category.
+5. **`11_anime_category_live.png`**: Makoto Shinkai & Studio Ghibli anime aesthetic pipeline.
+6. **`12_lofi_category_live.png`**: Classic LoFi study girl with rain animation.
+7. **`13_pixar_category_live.png`**: Pixar 3D warm cabin fireplace and rooftop stars.
+8. **`14_cyberpunk_category_live.png`**: Futuristic cyberpunk neon rain and ramen alley.
+9. **`15_nature_category_live.png`**: Biophilic forest waterfall glasshouse.
+10. **`16_ref_modal_categories.png`**: 8-category filter bar inside Curated Reference Library modal.

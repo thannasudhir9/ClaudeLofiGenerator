@@ -328,6 +328,8 @@ export default function Home() {
       setMood(item.mood);
     }
     setPreviewMode(true);
+    setResult(null);
+    setRefRepoOpen(false);
     setStatus({
       kind: "ok",
       text: `Loaded reference asset: "${item.title}" (${item.category.toUpperCase()}) as video scene!`,
@@ -340,9 +342,6 @@ export default function Home() {
       .then((data) => {
         if (data.items && Array.isArray(data.items)) {
           setHistory(data.items);
-          if (data.items.length > 0 && !result) {
-            setResult(data.items[0]);
-          }
         }
       })
       .catch(() => {});
@@ -567,6 +566,7 @@ export default function Home() {
       setStyle(customAnimStyle);
       setLiveAnimatorEnabled(true);
       setPreviewMode(true);
+      setResult(null);
       setUploadModalOpen(false);
       setStatus({ kind: "ok", text: `Custom image activated as living ${customAnimStyle.toUpperCase()} scene!` });
     } catch (err: any) {
@@ -611,20 +611,27 @@ export default function Home() {
     if (p.style) setStyle(p.style);
     setSeconds(p.seconds);
     setTitle(p.label + " Lofi Mix");
+    setPreviewMode(true);
+    setResult(null);
+    setStatus({ kind: "ok", text: `Loaded inspiration preset: "${p.label}"!` });
   }
 
   // Mood selection with automatic scene & style matching
   function selectMood(mId: string) {
     setMood(mId);
     const moodSceneMap: Record<string, { scene: string; style?: Style }> = {
+      devotional_temple: { scene: "krishna_radha_beach.jpg", style: "devotional" },
       shinkai_anime: { scene: "anime_shinkai_sunset.jpg", style: "anime" },
       pixar_cozy: { scene: "pixar_cozy_cabin.jpg", style: "pixar" },
       ghibli_garden: { scene: "anime_ghibli_garden.jpg", style: "anime" },
+      cyber_synthwave: { scene: "cyberpunk_neon_rain.jpg", style: "cyberpunk" },
+      nature_sanctuary: { scene: "nature_biophilic_waterfall.jpg", style: "nature" },
+      simple_minimal: { scene: "simple_ai_minimal_lounge.jpg", style: "simple_ai" },
       night: { scene: "lofi_study_girl.jpg", style: "lofi" },
       sunset: { scene: "lofi_sunset_balcony.jpg", style: "lofi" },
       morning: { scene: "lofi_slow_morning.jpg", style: "lofi" },
       lofi_cafe: { scene: "lofi_rainy_cafe.jpg", style: "lofi" },
-      cyberpunk: { scene: "lofi_tokyo_cyberpunk.jpg", style: "lofi" },
+      cyberpunk: { scene: "lofi_tokyo_cyberpunk.jpg", style: "cyberpunk" },
       dreamy: { scene: "lofi_starlight_bedroom.jpg", style: "lofi" },
       autumn: { scene: "lofi_sunset_balcony.jpg", style: "lofi" },
     };
@@ -632,18 +639,27 @@ export default function Home() {
       setSelectedScene(moodSceneMap[mId].scene);
       if (moodSceneMap[mId].style) setStyle(moodSceneMap[mId].style!);
     }
+    setPreviewMode(true);
+    setResult(null);
   }
 
   // Visual style selection with smart artwork pairing
   function handleStyleSelect(sId: Style) {
     setStyle(sId);
-    if (sId === "anime" && !selectedScene.startsWith("anime_")) {
-      setSelectedScene("anime_shinkai_sunset.jpg");
-    } else if (sId === "pixar" && !selectedScene.startsWith("pixar_")) {
-      setSelectedScene("pixar_cozy_cabin.jpg");
-    } else if (sId === "lofi" && (selectedScene.startsWith("anime_") || selectedScene.startsWith("pixar_"))) {
-      setSelectedScene("lofi_study_girl.jpg");
+    const styleSceneMap: Record<Style, string> = {
+      devotional: "krishna_radha_beach.jpg",
+      anime: "anime_shinkai_sunset.jpg",
+      pixar: "pixar_cozy_cabin.jpg",
+      lofi: "lofi_study_girl.jpg",
+      cyberpunk: "cyberpunk_neon_rain.jpg",
+      nature: "nature_biophilic_waterfall.jpg",
+      simple_ai: "simple_ai_minimal_lounge.jpg",
+    };
+    if (styleSceneMap[sId]) {
+      setSelectedScene(styleSceneMap[sId]);
     }
+    setPreviewMode(true);
+    setResult(null);
   }
 
   // Format seconds to MM:SS
@@ -822,6 +838,8 @@ export default function Home() {
         setSelectedScene(res.filename);
         setStyle(googleCategory as Style);
         setScenesList((prev) => [res.scene, ...prev]);
+        setPreviewMode(true);
+        setResult(null);
         setGoogleStatusText(`Success! Generated artwork via ${res.provider} at ${res.resolution.toUpperCase()}.`);
         setStatus({ kind: "ok", text: `Google AI artwork activated as living scene!` });
       }
@@ -1448,6 +1466,8 @@ export default function Home() {
                         onClick={() => {
                           setSelectedScene("lofi_study_girl.jpg");
                           setSelectedRef(null);
+                          setPreviewMode(true);
+                          setResult(null);
                         }}
                       >
                         Reset
@@ -1475,8 +1495,19 @@ export default function Home() {
                         type="button"
                         className={`cat-pill ${activeCategory === cat.id ? "active" : ""}`}
                         onClick={() => {
-                          setActiveCategory(cat.id as Category);
+                          const cId = cat.id as Category;
+                          setActiveCategory(cId);
                           setActiveSubCategory("all");
+                          if (cId !== "all") {
+                            setStyle(cId as Style);
+                            const defaultSc = scenesList.find((s) => s.category === cId)?.id;
+                            if (defaultSc) setSelectedScene(defaultSc);
+                            const defaultSub = SUBCATEGORIES.find((s) => s.category === cId);
+                            if (defaultSub?.prompt) setPrompt(defaultSub.prompt);
+                            if (defaultSub?.mood) setMood(defaultSub.mood);
+                          }
+                          setPreviewMode(true);
+                          setResult(null);
                         }}
                       >
                         <span>{cat.label}</span>
@@ -1509,6 +1540,7 @@ export default function Home() {
                         if (sub.mood) setMood(sub.mood);
                         if (sub.prompt) setPrompt(sub.prompt);
                         setPreviewMode(true);
+                        setResult(null);
                         setStatus({ kind: "ok", text: `Loaded subcategory preset: "${sub.name}"!` });
                       }}
                       title={sub.desc}
@@ -1534,6 +1566,8 @@ export default function Home() {
                           setSelectedScene(sc.id);
                           if (sc.style) setStyle(sc.style as Style);
                           setPreviewMode(true);
+                          setResult(null);
+                          setStatus({ kind: "ok", text: `Selected scene: "${sc.label}"!` });
                         }}
                         title={sc.tag}
                       >
@@ -2134,15 +2168,29 @@ export default function Home() {
                   {liveAnimatorEnabled ? "✨ Animator: LIVE" : "⏸ Animator: OFF"}
                 </button>
                 {result && (
-                  <button
-                    type="button"
-                    className="preset-chip"
-                    style={{ padding: "0.15rem 0.5rem", fontSize: "0.7rem", marginLeft: "0.3rem" }}
-                    onClick={() => setPreviewMode(!previewMode)}
-                    title="Toggle between rendered video and selected background artwork stage"
-                  >
-                    {previewMode ? "▶ Show Video" : "🖼 Scene Stage"}
-                  </button>
+                  <div style={{ display: "flex", gap: "0.3rem", marginLeft: "0.3rem" }}>
+                    <button
+                      type="button"
+                      className="preset-chip"
+                      style={{ padding: "0.15rem 0.5rem", fontSize: "0.7rem", background: !previewMode ? "var(--accent)" : undefined, color: !previewMode ? "#000" : undefined, fontWeight: 600 }}
+                      onClick={() => setPreviewMode(!previewMode)}
+                      title="Toggle between rendered video and selected background artwork stage"
+                    >
+                      {previewMode ? "▶ Watch Video" : "🖼 Scene Stage"}
+                    </button>
+                    <button
+                      type="button"
+                      className="preset-chip"
+                      style={{ padding: "0.15rem 0.5rem", fontSize: "0.7rem", color: "var(--text-muted)" }}
+                      onClick={() => {
+                        setResult(null);
+                        setPreviewMode(true);
+                      }}
+                      title="Clear video and design a new scene"
+                    >
+                      ✕ New Scene
+                    </button>
+                  </div>
                 )}
               </div>
               <div style={{ display: "flex", gap: "0.5rem", fontSize: "0.75rem", fontFamily: "Space Grotesk, monospace" }}>
@@ -2541,6 +2589,7 @@ export default function Home() {
                         style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
                         onClick={() => {
                           setResult(item);
+                          setPreviewMode(false);
                           setVaultOpen(false);
                         }}
                       >

@@ -1,6 +1,11 @@
 # 🎧 Claude LoFi, Anime, Devotional & Multi-Category Generator Studio
 
 > **An AI-Powered Multimedia Production Studio for Procedural LoFi Beats, Makoto Shinkai Anime Landscapes, Devotional & Sacred Temples, Cyberpunk Synthwave, Biophilic Nature, and Simple AI Minimalist Video Loops.**
+
+> **Latest Release**: V2.5 PRO — **October 13, 2026 — 21:35:00 CEST (UTC+2)**  
+> **Unlimited Credits**: `999,999,999` • 100% Free & Open Creator Studio  
+> **Studio Monitor**: Real-time 60fps Living Canvas Animator with Zero-Lock Scene Switching (BUG-015 Fix)  
+
 >
 > **Project Date & Time**: October 13, 2026 — 21:10:00 CEST (UTC+2)  
 > **Author & Maintainer**: Sudhir Thanna (`thannasudhir9`)  
@@ -244,12 +249,37 @@ All four core user transcript feedback requirements tested and validated 100% en
 
 ## 🛠️ Quick Start Guide
 
+### 🚀 One-Click Studio Controller (`app.bat` & `app.sh`)
+
+We provide unified application controllers for **Windows (`app.bat`)** and **Linux / macOS / Git Bash (`app.sh`)** to start, stop, restart, and inspect the entire studio with a single command:
+
+#### Windows (`app.bat`)
+```cmd
+app.bat start     :: Starts Backend (:3000) & Next.js Studio (:3001) in background
+app.bat status    :: Inspects live health, active ports, and PIDs
+app.bat stop      :: Stops all running studio processes cleanly
+app.bat restart   :: Performs clean stop and fresh launch
+app.bat           :: Run without arguments (or double-click) for interactive menu
+```
+
+#### Linux / macOS / Git Bash (`app.sh`)
+```bash
+chmod +x app.sh
+./app.sh start    # Starts Backend (:3000) & Next.js Studio (:3001) in background
+./app.sh status   # Inspects live health, active ports, and PIDs
+./app.sh stop     # Stops all running studio processes cleanly
+./app.sh restart  # Performs clean stop and fresh launch
+./app.sh          # Run without arguments for interactive menu
+```
+
+---
+
 ### Prerequisites
 1. **Node.js** (v18.0.0 or higher recommended)
-2. **Python 3.10+** (for automated test engine & ML scripts)
+2. **Python 3.10+** (for automated test engine & Playwright E2E)
 3. **FFmpeg** installed and accessible in your system `PATH` (`ffmpeg -version`)
 
-### Installation & Launch
+### Manual Launch (Alternative)
 
 1. **Install Frontend Dependencies:**
    ```bash

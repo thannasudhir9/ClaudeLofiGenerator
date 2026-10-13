@@ -240,3 +240,59 @@ All rendered jobs are sandboxed under `outputs/{job_id}/`:
 - `out.mp4`: Final muxed H.264 / AAC video file.
 - `metadata.json`: Full job parameters, timestamps, and generation stats.
 - Cleanup policies ensure old scratch outputs can be purged while maintaining active user references.
+
+---
+
+## 🖥️ Studio Monitor Dual-Mode State Machine & Selection Bus
+
+The Studio Monitor on the right side of the workspace acts as the primary visual display, operating as a deterministic finite state machine between **Live Stage** and **Rendered Video**:
+
+```
+                       ┌─────────────────────────────────────────────────────────────┐
+                       │                                                             │
+                       │                      INITIAL LOAD                           │
+                       │                  (loadHistory without auto-set)             │
+                       │                                                             │
+                       └──────────────────────────────┬──────────────────────────────┘
+                                                      │
+                                                      ▼
+                       ┌─────────────────────────────────────────────────────────────┐
+                       │                       LIVE STAGE MODE                       │
+                       │              (previewMode === true || result === null)      │
+                       │                                                             │
+                       │  - Living Backdrop: sceneImgSrc (/backgrounds/...)          │
+                       │  - Real-time 60fps HTML5 Canvas Particle Engine:            │
+                       │    * LoFi: Rain streaks & amber dust particles              │
+                       │    * Anime: Pink cherry blossoms (sakura) & star glow       │
+                       │    * Pixar: Warm fireplace embers & cozy fireflies          │
+                       │    * Devotional: Floating golden river lotus diyas          │
+                       │    * Cyberpunk: High-speed neon rain & cyan streaks         │
+                       │    * Nature: Emerald leaves & sunlight pollen drift         │
+                       │    * Simple AI: Clean geometric dots & subtle breathing     │
+                       └──────────────┬──────────────────────────────▲───────────────┘
+                                      │                              │
+                          POST /api/generate or                      │ [✕ New Scene] or
+                          Load from Vault                            │ Any Selection Click:
+                                      │                              │ - Preset Chip
+                                      ▼                              │ - Mood Card
+                       ┌──────────────────────────────────────────┐  │ - Style Selector
+                       │                   RENDERED               │  │ - Category Pill
+                       │                  VIDEO MODE              │  │ - Subcategory Pill
+                       │           (previewMode === false &&      │──┘ - Scene Grid Card
+                       │                result !== null)          │    - Reference Drawer
+                       │                                          │    - Upload Activate
+                       │  - HTML5 <video> with controls & scrub   │
+                       │  - ID & Metadata Banner: ID, 16:9, Res   │
+                       │  - Direct MP4 & WAV Download actions     │
+                       │  - YouTube & Instagram Reels publisher   │
+                       │  - [▶ Watch Video / 🖼 Scene Stage] deck │
+                       │  - [✕ New Scene] instant dismiss button  │
+                       └──────────────────────────────────────────┘
+```
+
+### Selection Event Synchronization Invariants
+To prevent video-locking bugs (such as BUG-015 where the monitor was locked to the `#b2f43a63` chair video), every visual selection interaction in `web/app/page.tsx` adheres to the following invariant:
+1. `setPreviewMode(true)` is invoked immediately.
+2. `setResult(null)` is invoked to unmount the rendered video tag and restore active stage canvas rendering.
+3. The newly selected background (`selectedScene`) and style (`style`) are applied atomically.
+4. If a video has been generated, users can click `[✕ New Scene]` in the deck header at any time to return to designing without page reload.

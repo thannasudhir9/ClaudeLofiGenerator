@@ -333,3 +333,40 @@ Default platform economics prioritize paywalls and gating over open community cr
 4. **Instant Refund Guarantee**: Added policy guarantee that any failed generation is 100% refunded instantly.
 5. **Validation**: Tested in `tests/test_transcript_features.py`, asserting `creditsRemaining == 999999999` and `isUnlimited == True`.
 
+---
+
+### 🔴 BUG-015: Studio Monitor Frozen on Past Render Video (#b2f43a63 Chair Video) on Scene Selection
+
+#### Date & Time
+**October 13, 2026 — 21:35:00 CEST (UTC+2)**
+
+#### Problem Description
+Whatever preset, category, subcategory, or scene card the user clicked in the UI, the Studio Monitor on the right side remained frozen on a previously rendered video (specifically Job `#b2f43a63` "Simple AI minimalist modern zen lounge", displaying an armchair overlooking misty forest). Users were unable to preview new artwork backdrops or live particle effects without refreshing the entire application.
+
+#### Root Cause Analysis
+1. **Unwanted Auto-Mount Load in `loadHistory()`**: In `web/app/page.tsx`, `loadHistory()` was executing `if (data.items.length > 0 && !result) setResult(data.items[0])` on initial component mount. The first item in history was `#b2f43a63`, which immediately populated the `result` state on load.
+2. **Missing State Reset on User Selections**: When `result` was non-null and `previewMode` was `false`, the Studio Monitor conditionally rendered `<video ref={videoRef} src={result.url} />`. However, clicking on:
+   - Preset inspiration chips (`applyPreset`)
+   - Harmonic mood cards (`selectMood`)
+   - Visual style buttons (`handleStyleSelect`)
+   - Category filter pills (`cat-pill`)
+   - Subcategory pills (`subcat-pill`)
+   - Scene cards in the grid (`scene-card`)
+   - Reference modal assets (`selectReferenceAsset`)
+   did not consistently reset `setResult(null)` or trigger `setPreviewMode(true)`. Consequently, the HTML5 video element stayed mounted with the chair video playing.
+3. **No Dismiss Action in Studio Monitor**: There was no button allowing creators to dismiss a completed video and return to designing new scenes on the live stage.
+
+#### Engineering Fix
+1. **Removed Auto-Load on Mount**: Cleaned up `loadHistory()` in `web/app/page.tsx` by removing `setResult(data.items[0])`. The application now always starts in fresh `LIVE STAGE` mode with default artwork and particle animator.
+2. **Synchronized All Selection Handlers**:
+   - `selectMood()`: Maps all 7 aesthetic categories (Devotional, Anime, Pixar 3D, LoFi, Cyberpunk, Nature, Simple AI) to matching default scenes and calls `setPreviewMode(true); setResult(null);`.
+   - `handleStyleSelect()`: Maps all 7 styles to their iconic artwork and calls `setPreviewMode(true); setResult(null);`.
+   - `selectReferenceAsset()`: Calls `setPreviewMode(true); setResult(null); setRefRepoOpen(false);`.
+   - Category filter pills: On click, automatically sets category style, default scene, prompt, mood, and triggers `setPreviewMode(true); setResult(null);`.
+   - Subcategory pills: Sets subcategory scene, style, prompt, mood, and triggers `setPreviewMode(true); setResult(null);`.
+   - Scene cards in grid: Sets selected scene and style, and triggers `setPreviewMode(true); setResult(null);`.
+   - Reference reset button: Resets scene to `lofi_study_girl.jpg` and triggers `setPreviewMode(true); setResult(null);`.
+   - Custom image upload & Google AI generation: Both trigger `setPreviewMode(true); setResult(null);` immediately on activation.
+3. **Added "✕ New Scene" Dismiss Button**: Added a dedicated `[✕ New Scene]` button in the Studio Monitor deck header alongside the `[▶ Watch Video / 🖼 Scene Stage]` toggle, giving creators immediate 1-click ability to unload any video.
+4. **Validation**: Added Playwright E2E test `tests/test_selection_and_monitor.py` testing initial load, 6 quick preset chips, 7 category tabs, subcategory pills, and scene cards. 100% test pass rate with zero console errors. Screenshot saved to `tests/monitor_selection_verified.png`.
+
