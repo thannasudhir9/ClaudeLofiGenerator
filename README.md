@@ -38,7 +38,13 @@ All views and modals are captured at full 1440x900 resolution and archived in [`
 
 ---
 
-### 4. Standalone Zero-Dependency Fallback Studio (Port 3000)
+### 4. Custom Still Image Living Animator Modal
+*Upload any still photo or enter an image URL and transform it into a living, animated scene with choice of LoFi analog breathing, Anime Makoto Shinkai sky pan & cel lines, or Pixar volumetric 3D bloom.*
+![Custom Still Image Animator Modal](./screenshots/08_custom_image_animator_modal.png)
+
+---
+
+### 5. Standalone Zero-Dependency Fallback Studio (Port 3000)
 *Pure HTML5/CSS3/JavaScript studio directly served by the backend engine with zero build step required.*
 ![Fallback HTML5 Studio](./screenshots/07_fallback_html5_studio.png)
 
@@ -122,7 +128,15 @@ The system seamlessly combines a **Node.js FFmpeg Rendering & Audio Synthesis En
 - Fully indexed JSON catalog with tags, descriptions, prompt ideas, and style attributes.
 - Interactive modal browser in Next.js with style tabs, search filter, and instant "Use as Background" action.
 
-### 5. 📤 Multi-Platform Social Media Auto-Publisher (`publish.mjs`)
+### 5. 🖼️ Custom Still Image Living Animator (`POST /api/upload-image`)
+- **Add Any Still Photo**: Drag-and-drop file upload (PNG, JPG, WebP up to 25MB) or paste any direct image URL.
+- **Three Dynamic Animation Engines**:
+  - 🎧 **LoFi Tape Living Room**: Analog camera breathing motion, falling rain streaks, and vintage film grain texture.
+  - 🌸 **Anime Cel & Shinkai Twilight**: Makoto Shinkai sky pan drift, high-contrast cel sharpness, and floating celestial fireflies.
+  - ✨ **Pixar 3D Volumetric Bloom**: Soft volumetric screen bloom pulse, floating warm golden embers, and 3D parallax depth drift.
+- **Real-Time Studio Particle Preview**: Live Canvas particle engine playing continuous rain, sakura petals, or glowing embers in the browser Studio Monitor.
+
+### 6. 📤 Multi-Platform Social Media Auto-Publisher (`publish.mjs`)
 - Automatic video upload integration for:
   - **YouTube Studio API** (Video title, tags, description, privacy status)
   - **Instagram Graph API** (Reels container upload & publishing)
@@ -139,7 +153,7 @@ A comprehensive Python and Playwright testing engine validates all features end-
 python tests/test_engine.py
 ```
 
-### Test Validation Matrix (100% Pass Rate)
+### Test Validation Matrix (10/10 Passed — 100% Pass Rate)
 
 | Category | Feature Under Test | Tool | Result |
 |---|---|---|---|
@@ -147,10 +161,12 @@ python tests/test_engine.py
 | **API** | `GET /api/moods` (9 Musical moods) | Python `urllib` | ✅ **PASSED** |
 | **API** | `GET /api/references` (300 Database) | Python `urllib` | ✅ **PASSED** |
 | **API** | `GET /api/stock-videos` (6 MP4 loops) | Python `urllib` | ✅ **PASSED** |
+| **API** | `POST /api/upload-image` (Custom Image Upload) | Python `urllib` | ✅ **PASSED** |
 | **Audio** | Procedural Audio DSP (4 Mood WAVs) | Node.js / `generate.mjs` | ✅ **PASSED** |
-| **Video** | FFmpeg Rendering (`-stream_loop -1`) | `server.mjs` / FFmpeg | ✅ **PASSED** |
-| **Frontend** | Studio Monitor, Modals, Tabs (Port 3001) | Playwright Chromium | ✅ **PASSED** |
-| **Fallback** | Standalone HTML5 UI (Port 3000) | Playwright Chromium | ✅ **PASSED** |
+| **Video** | Stock Video Looping (`-stream_loop -1`) | `server.mjs` / FFmpeg | ✅ **PASSED** |
+| **Video** | Still Image Animator (Anime Sky Pan & Cel) | `server.mjs` / FFmpeg | ✅ **PASSED** |
+| **Frontend** | Studio Monitor, Modals, Animator (Port 3001) | Playwright Chromium | ✅ **PASSED** |
+| **Fallback** | Standalone HTML5 UI & Upload (Port 3000) | Playwright Chromium | ✅ **PASSED** |
 
 👉 Detailed metrics: [docs/TEST_REPORT.md](./docs/TEST_REPORT.md)
 

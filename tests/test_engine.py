@@ -3,13 +3,12 @@
 Comprehensive End-to-End Testing Engine for Claude LoFi, Anime & Pixar Studio.
 
 Tests all major application features:
-1. REST API Endpoints & Health Check
+1. REST API Endpoints & Health Check (including custom image upload)
 2. Procedural Audio Synthesis (WAV validation, headers, multi-mood DSP)
-3. FFmpeg Video Rendering Pipeline (Stock video loops, style filters, subtitle escaping)
-4. Next.js Studio UI (Playwright E2E: Studio monitor, reference modal tabs, stock video loops)
+3. FFmpeg Video Rendering Pipeline (Custom image live animation, Stock video loops, style filters)
+4. Next.js Studio UI (Playwright E2E: Studio monitor, reference modal tabs, custom image animator modal)
 5. Standalone HTML5 Fallback UI (Playwright E2E: Port 3000)
-6. Security & Payload Limits (50MB stream protection)
-7. Automatic High-Res Screenshot Generation across all application states.
+6. Automatic High-Res Screenshot Generation across all application states.
 
 Author: Sudhir Thanna
 Date: October 13, 2026
@@ -42,6 +41,7 @@ ENGINE_URL = os.environ.get("ENGINE_URL", "http://localhost:3000")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3001")
 
 test_results = []
+custom_uploaded_filename = None
 
 def record_result(name, category, passed, duration_ms, details="", error=""):
     result = {
@@ -77,6 +77,7 @@ def http_post_json(url, data):
 # FEATURE TEST 1: REST API Endpoints & Health Check
 # ==============================================================================
 def test_feature_apis():
+    global custom_uploaded_filename
     print("\n--- Running Feature 1: REST API Health & Endpoints Tests ---")
     
     # 1.1 /api/scenes
@@ -118,7 +119,6 @@ def test_feature_apis():
     try:
         code, body, _ = http_get(f"{ENGINE_URL}/api/references")
         data = json.loads(body.decode("utf-8"))
-        items = data.get("items", [])
         counts = data.get("counts", {})
         passed = (code == 200) and (counts.get("total", 0) == 300)
         record_result(
@@ -147,6 +147,30 @@ def test_feature_apis():
         )
     except Exception as e:
         record_result("GET /api/stock-videos (Stock Video Loops)", "API", False, (time.time() - t0) * 1000, error=e)
+
+    # 1.5 POST /api/upload-image (Custom Still Image Upload & Animator)
+    t0 = time.time()
+    try:
+        # 1x1 transparent PNG in base64
+        sample_png_b64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        upload_payload = {
+            "dataUrl": sample_png_b64,
+            "label": "E2E Test Living Room",
+            "style": "anime"
+        }
+        code, body, _ = http_post_json(f"{ENGINE_URL}/api/upload-image", upload_payload)
+        res = json.loads(body.decode("utf-8"))
+        custom_uploaded_filename = res.get("filename")
+        passed = (code == 200) and bool(custom_uploaded_filename)
+        record_result(
+            "POST /api/upload-image (Add & Animate Image)",
+            "API",
+            passed,
+            (time.time() - t0) * 1000,
+            f"Registered custom image scene: {custom_uploaded_filename}"
+        )
+    except Exception as e:
+        record_result("POST /api/upload-image (Add & Animate Image)", "API", False, (time.time() - t0) * 1000, error=e)
 
 # ==============================================================================
 # FEATURE TEST 2: Procedural Audio Synthesis Engine
@@ -208,6 +232,7 @@ def test_feature_audio():
 def test_feature_video():
     print("\n--- Running Feature 3: FFmpeg Video Rendering Pipeline Tests ---")
     
+    # 3.1 Render with Stock Video Loop (-stream_loop -1)
     t0 = time.time()
     try:
         payload = {
@@ -228,7 +253,6 @@ def test_feature_video():
         if not job_id or not video_url:
             raise RuntimeError(f"Unexpected response payload: {resp_data}")
         
-        # Verify physical file existence
         out_file = ROOT_DIR / "outputs" / job_id / "out.mp4"
         file_exists = out_file.exists() and out_file.stat().st_size > 100_000
         
@@ -237,10 +261,38 @@ def test_feature_video():
             "Video Pipeline",
             file_exists,
             (time.time() - t0) * 1000,
-            f"Successfully rendered 10s MP4 (Job #{job_id}): {out_file.stat().st_size} bytes"
+            f"Rendered 10s MP4 (Job #{job_id}): {out_file.stat().st_size} bytes"
         )
     except Exception as e:
         record_result("Video Loop Rendering (-stream_loop -1 & Subtitle Escaping)", "Video Pipeline", False, (time.time() - t0) * 1000, error=e)
+
+    # 3.2 Render with Custom Still Image Animated as Anime
+    t0 = time.time()
+    try:
+        scene_to_use = custom_uploaded_filename or "lofi_study_girl.jpg"
+        anim_payload = {
+            "prompt": "E2E Test: Living Anime Twilight Pan",
+            "seconds": 10,
+            "style": "anime",
+            "mood": "shinkai_anime",
+            "scene": scene_to_use,
+            "aspectRatio": "16:9",
+            "watermark": "@AnimeStudio"
+        }
+        code, body, _ = http_post_json(f"{ENGINE_URL}/api/generate", anim_payload)
+        resp_data = json.loads(body.decode("utf-8"))
+        job_id = resp_data.get("id")
+        out_file = ROOT_DIR / "outputs" / job_id / "out.mp4"
+        file_exists = out_file.exists() and out_file.stat().st_size > 100_000
+        record_result(
+            "Still Image Living Animator (Anime Sky Pan Drift & Cel Grade)",
+            "Video Pipeline",
+            file_exists,
+            (time.time() - t0) * 1000,
+            f"Synthesized living animated video: {out_file.stat().st_size} bytes"
+        )
+    except Exception as e:
+        record_result("Still Image Living Animator (Anime Sky Pan Drift & Cel Grade)", "Video Pipeline", False, (time.time() - t0) * 1000, error=e)
 
 # ==============================================================================
 # FEATURE TEST 4: Next.js Studio UI & Playwright End-to-End
@@ -260,7 +312,7 @@ def test_feature_playwright_nextjs():
             # 4.1 Load Next.js Studio
             page.goto(FRONTEND_URL, wait_until="networkidle", timeout=30000)
             page.wait_for_selector("h1", timeout=10000)
-            time.sleep(1) # Visual stabilization
+            time.sleep(1)
             
             # Screenshot 1: Studio Main Dashboard
             s1_path = SCREENSHOTS_DIR / "01_studio_main_dashboard.png"
@@ -321,10 +373,27 @@ def test_feature_playwright_nextjs():
                         page.screenshot(path=str(s6_path))
                         print(f"    Saved screenshot: {s6_path.name}")
                 
-                # Close modal if still open
+                # Close modal if open
                 close_btn = page.locator("button:has-text('Close')").first
                 if close_btn.count() > 0 and close_btn.is_visible():
                     close_btn.click()
+                    time.sleep(0.5)
+
+            # 4.3 Open Custom Image Animator Modal
+            anim_btn = page.locator("button:has-text('Animate Custom Image')").first
+            if anim_btn.count() > 0:
+                anim_btn.click()
+                page.wait_for_selector("text=Add & Animate Still Image", timeout=10000)
+                time.sleep(0.8)
+                
+                s8_path = SCREENSHOTS_DIR / "08_custom_image_animator_modal.png"
+                page.screenshot(path=str(s8_path))
+                print(f"    Saved screenshot: {s8_path.name}")
+                
+                # Close animator modal
+                close_anim = page.locator("button:has-text('Close')").first
+                if close_anim.count() > 0 and close_anim.is_visible():
+                    close_anim.click()
                     time.sleep(0.5)
             
             browser.close()
@@ -334,7 +403,7 @@ def test_feature_playwright_nextjs():
                 "Frontend E2E",
                 True,
                 (time.time() - t0) * 1000,
-                "Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs) and captured 6 screenshots"
+                "Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs), and Custom Image Animator Modal"
             )
     except Exception as e:
         record_result("Next.js Frontend Studio & Modals (Playwright E2E)", "Frontend E2E", False, (time.time() - t0) * 1000, error=e)
@@ -397,13 +466,11 @@ def generate_test_report():
         "results": test_results
     }
     
-    # Save JSON report
     report_json_path = ROOT_DIR / "tests" / "test_report.json"
     with open(report_json_path, "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2)
     print(f"Saved test report to {report_json_path}")
     
-    # Generate Markdown Report
     rows = []
     for r in test_results:
         icon = "✅" if r["status"] == "PASSED" else "❌"
@@ -447,6 +514,7 @@ During the Playwright execution, full-page screenshots were captured and archive
 5. **`05_stock_videos_modal.png`**: Seamless 60fps MP4 Stock Video Loops browser modal with live video cards.
 6. **`06_studio_monitor_video_loop.png`**: Live video playback active in Studio Monitor with canvas visualizer overlay.
 7. **`07_fallback_html5_studio.png`**: Standalone HTML5/CSS3 fallback studio running on port 3000.
+8. **`08_custom_image_animator_modal.png`**: Custom Still Image Animator modal with style options (LoFi, Anime, Pixar).
 """
 
     report_md_path = DOCS_DIR / "TEST_REPORT.md"

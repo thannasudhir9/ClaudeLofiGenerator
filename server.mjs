@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import { createReadStream } from "node:fs";
 import { copyFile, mkdir, readFile, writeFile, stat, readdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
@@ -205,8 +206,17 @@ async function renderMp4(jobDir, { seconds, bg, title, sub, watermark, timed = [
       await copyFile(bg.localFile, path.join(jobDir, imgName)).catch(() => {});
     }
     inputs = ["-loop", "1", "-i", imgName];
-    // Subtle cinematic camera breath (Ken Burns zoompan) + analog film grain texture
-    bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='min(zoom+0.0003,1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${layout.width}x${layout.height}:fps=30,noise=alls=9:allf=t+u[${bgLabel}]`;
+    // Dynamic style-specific living animation for still images
+    if (style === "anime") {
+      // Makoto Shinkai sky & cloud pan drift across the horizon + cel sharpness
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='min(zoom+0.0004,1.08)':x='(iw-iw/zoom)*(0.5+0.18*sin(in/90))':y='(ih-ih/zoom)*(0.4+0.12*cos(in/110))':d=1:s=${layout.width}x${layout.height}:fps=30[${bgLabel}]`;
+    } else if (style === "pixar") {
+      // 3D parallax depth breathing with gentle multi-axis floating
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='1.02+0.03*sin(in/75)':x='iw/2-(iw/zoom/2)+15*sin(in/90)':y='ih/2-(ih/zoom/2)+10*cos(in/90)':d=1:s=${layout.width}x${layout.height}:fps=30[${bgLabel}]`;
+    } else {
+      // Classic LoFi: Slow analog camera breath + film grain texture
+      bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},zoompan=z='1.01+0.02*sin(in/90)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${layout.width}x${layout.height}:fps=30,noise=alls=10:allf=t+u[${bgLabel}]`;
+    }
   } else {
     inputs = ["-f", "lavfi", "-i", `gradients=s=${layout.width}x${layout.height}:c0=${bg.colors[0]}:c1=${bg.colors[1]}:speed=0.01:rate=30:duration=${seconds}`];
     bgScale = `[0:v]scale=${layout.width}:${layout.height}:force_original_aspect_ratio=increase,crop=${layout.width}:${layout.height},setsar=1,fps=30[${bgLabel}]`;
@@ -625,6 +635,99 @@ function handleTrimSilence(req, res) {
   });
 }
 
+async function downloadImageFromUrl(url) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const getFn = parsed.protocol === "https:" ? https.get : http.get;
+    getFn(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return downloadImageFromUrl(res.headers.location).then(resolve, reject);
+      }
+      if (res.statusCode !== 200) {
+        return reject(new Error(`Failed to download image: HTTP ${res.statusCode}`));
+      }
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => {
+        const buffer = Buffer.concat(chunks);
+        const ctype = res.headers["content-type"] || "";
+        let ext = ".jpg";
+        if (ctype.includes("png")) ext = ".png";
+        else if (ctype.includes("webp")) ext = ".webp";
+        resolve({ buffer, ext });
+      });
+      res.on("error", reject);
+    }).on("error", reject);
+  });
+}
+
+async function handleUploadImage(req, res) {
+  try {
+    const chunks = [];
+    let total = 0;
+    const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB limit
+    for await (const chunk of req) {
+      total += chunk.length;
+      if (total > MAX_UPLOAD_BYTES) {
+        return sendJson(res, 413, { error: "Image file exceeds 25MB maximum limit" });
+      }
+      chunks.push(chunk);
+    }
+    const fullBuffer = Buffer.concat(chunks);
+    let buffer;
+    let ext = ".jpg";
+    let style = "lofi";
+    let label = "Custom Living Scene";
+
+    const textPayload = fullBuffer.toString("utf-8").trim();
+    if (textPayload.startsWith("{")) {
+      const parsed = JSON.parse(textPayload);
+      style = parseStyle(parsed.style);
+      label = (parsed.label || "Custom Image").slice(0, 50);
+      if (parsed.imageUrl) {
+        const dl = await downloadImageFromUrl(parsed.imageUrl);
+        buffer = dl.buffer;
+        ext = dl.ext;
+      } else if (parsed.dataUrl) {
+        const match = parsed.dataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+        if (!match) throw new Error("Invalid base64 image data");
+        ext = `.${match[1] === "jpeg" ? "jpg" : match[1]}`;
+        buffer = Buffer.from(match[2], "base64");
+      } else {
+        throw new Error("No dataUrl or imageUrl in payload");
+      }
+    } else {
+      buffer = fullBuffer;
+      const ctype = req.headers["content-type"] || "image/jpeg";
+      if (ctype.includes("png")) ext = ".png";
+      else if (ctype.includes("webp")) ext = ".webp";
+    }
+
+    const filename = `custom_${Date.now()}_${randomUUID().slice(0, 6)}${ext}`;
+    const filePath = path.join(BGS, filename);
+    await writeFile(filePath, buffer);
+
+    const newScene = {
+      id: filename,
+      label: label,
+      tag: `Animated living artwork • Style: ${STYLE_NAMES[style]}`,
+      style: style,
+      url: `/backgrounds/${filename}`,
+    };
+    SCENES.unshift(newScene);
+
+    sendJson(res, 200, {
+      success: true,
+      filename,
+      url: `/backgrounds/${filename}`,
+      scene: newScene,
+    });
+  } catch (err) {
+    console.error("Image upload error:", err);
+    sendJson(res, 500, { error: err.message });
+  }
+}
+
 async function handleHistory(req, res) {
   try {
     const entries = await readdir(OUT, { withFileTypes: true });
@@ -810,6 +913,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/api/publish") return handlePublish(req, res);
   if (req.method === "POST" && url.pathname === "/api/slides") return handleSlides(req, res);
   if (req.method === "POST" && url.pathname === "/api/trim-silence") return handleTrimSilence(req, res);
+  if (req.method === "POST" && url.pathname === "/api/upload-image") return handleUploadImage(req, res);
 
   if (req.method === "GET" && url.pathname.startsWith("/outputs/")) {
     const target = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));

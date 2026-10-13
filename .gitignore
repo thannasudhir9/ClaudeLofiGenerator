@@ -14,6 +14,7 @@ outputs/*/*.mp4
 outputs/*/*.wav
 outputs/*/*.jpg
 outputs/*/*.json
+public/backgrounds/custom_*.*
 
 # Logs
 *.log

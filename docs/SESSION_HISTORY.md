@@ -182,3 +182,32 @@ This document captures the chronological record of all engineering interactions,
      - Mobile PWA companion app with sleep timer.
      - Autonomous YouTube channel monetization scheduler.
 
+---
+
+### 🔹 Prompt 8: Custom Still Image Upload & Living Animator (LoFi, Anime, Pixar)
+- **Timestamp**: `2026-10-13T16:32:00+02:00`
+- **User Instruction**:
+  > *"also give an option to add image and make it live and animated as lofi, anime , pixar = add this feature also"*
+
+#### Analysis & Execution
+1. **Backend Upload & Animation Pipeline (`server.mjs`)**:
+   - Implemented `POST /api/upload-image` endpoint supporting drag-and-drop local file uploads (base64 JSON or binary stream up to 25MB) and remote image URLs.
+   - Dynamic Still Image Living Animator in `renderMp4`:
+     - **LoFi**: Rhythmic analog camera breathing + vintage film grain (`noise=alls=10:allf=t+u`).
+     - **Anime**: Makoto Shinkai sky pan drift across clouds + cel-shading unsharp filter and vibrant contrast/saturation curves.
+     - **Pixar 3D**: Continuous 3D parallax floating drift + volumetric screen-blend bloom.
+2. **Frontend Living Animator Experience (`web/app/page.tsx`)**:
+   - Added **"🖼️ Animate Custom Image"** button and dedicated modal dialog.
+   - Built a real-time HTML5 Canvas particle system overlaying the Studio Monitor:
+     - LoFi mode: subtle falling rain streaks and CRT scanlines.
+     - Anime mode: drifting sakura petals and glowing celestial fireflies.
+     - Pixar mode: floating warm golden embers with pulsing lighting bloom.
+   - Added interactive **"✨ Animator: LIVE / OFF"** toggle in the Studio Monitor header.
+3. **Standalone UI (`public/index.html`)**:
+   - Added custom image file picker and automatic `/api/upload-image` dispatch to the scene selector.
+4. **Validation**:
+   - Added automated E2E tests in `tests/test_engine.py` (API upload, animated video synthesis, Playwright modal capture).
+   - Captured and archived screenshot: `screenshots/08_custom_image_animator_modal.png`.
+   - Verified 100% test pass rate (10/10 tests passed).
+
+

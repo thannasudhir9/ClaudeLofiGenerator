@@ -115,6 +115,16 @@ export default function Home() {
   const [refSearch, setRefSearch] = useState("");
   const [selectedRef, setSelectedRef] = useState<ReferenceItem | null>(null);
   const [refCounts, setRefCounts] = useState({ total: 300, lofi: 100, anime: 100, pixar: 100 });
+  
+  // Custom Still Image Living Animator State
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [customImageDataUrl, setCustomImageDataUrl] = useState<string | null>(null);
+  const [customImageUrl, setCustomImageUrl] = useState("");
+  const [customImageLabel, setCustomImageLabel] = useState("My Living Artwork");
+  const [customAnimStyle, setCustomAnimStyle] = useState<Style>("lofi");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [liveAnimatorEnabled, setLiveAnimatorEnabled] = useState(true);
+  const animatorCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const [ytUrl, setYtUrl] = useState("");
   const [gifUrl, setGifUrl] = useState("");
@@ -224,6 +234,138 @@ export default function Home() {
       })
       .catch(() => {});
   }
+
+  // Real-time Canvas Particle Animation Engine (LoFi Rain, Anime Petals/Fireflies, Pixar Embers)
+  useEffect(() => {
+    if (!liveAnimatorEnabled) return;
+    const canvas = animatorCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId: number;
+    let width = (canvas.width = canvas.parentElement?.clientWidth || 640);
+    let height = (canvas.height = canvas.parentElement?.clientHeight || 360);
+
+    const onResize = () => {
+      if (canvas.parentElement) {
+        width = canvas.width = canvas.parentElement.clientWidth;
+        height = canvas.height = canvas.parentElement.clientHeight;
+      }
+    };
+    window.addEventListener("resize", onResize);
+
+    const particles: { x: number; y: number; vx: number; vy: number; size: number; alpha: number }[] = [];
+    const count = style === "lofi" ? 45 : style === "anime" ? 35 : 25;
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: style === "anime" ? (Math.random() - 0.25) * 1.6 : (Math.random() - 0.5) * 0.4,
+        vy: style === "lofi" ? 3.5 + Math.random() * 4 : style === "pixar" ? -0.8 - Math.random() * 1.2 : 0.8 + Math.random() * 1.5,
+        size: style === "lofi" ? 1.5 : style === "pixar" ? 2.5 + Math.random() * 3 : 2 + Math.random() * 2.5,
+        alpha: 0.35 + Math.random() * 0.6,
+      });
+    }
+
+    let time = 0;
+    const render = () => {
+      time += 0.02;
+      ctx.clearRect(0, 0, width, height);
+
+      if (style === "lofi") {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.lineWidth = 1.2;
+        for (const p of particles) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - 1, p.y + p.vy * 2.5);
+          ctx.stroke();
+          p.y += p.vy;
+          p.x -= 0.4;
+          if (p.y > height) { p.y = -10; p.x = Math.random() * width; }
+          if (p.x < 0) p.x = width;
+        }
+      } else if (style === "anime") {
+        for (const p of particles) {
+          ctx.save();
+          ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(time + p.x));
+          ctx.fillStyle = p.vy < 1.2 ? "rgba(244, 114, 182, 0.85)" : "rgba(56, 189, 248, 0.9)";
+          ctx.shadowColor = ctx.fillStyle;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          p.x += p.vx + Math.sin(time + p.y * 0.01) * 0.5;
+          p.y += p.vy;
+          if (p.y > height) { p.y = -10; p.x = Math.random() * width; }
+          if (p.x > width) p.x = 0;
+          if (p.x < 0) p.x = width;
+        }
+      } else if (style === "pixar") {
+        for (const p of particles) {
+          ctx.save();
+          ctx.globalAlpha = p.alpha * (0.5 + 0.5 * Math.sin(time * 2 + p.y));
+          ctx.fillStyle = "rgba(245, 158, 11, 0.85)";
+          ctx.shadowColor = "rgba(251, 191, 36, 0.9)";
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          p.y += p.vy;
+          p.x += Math.sin(time + p.y * 0.02) * 0.7;
+          if (p.y < -10) { p.y = height + 10; p.x = Math.random() * width; }
+          if (p.x > width) p.x = 0;
+          if (p.x < 0) p.x = width;
+        }
+      }
+
+      animId = requestAnimationFrame(render);
+    };
+
+    animId = requestAnimationFrame(render);
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [liveAnimatorEnabled, style]);
+
+  const handleUploadAndAnimate = async () => {
+    try {
+      setUploadingImage(true);
+      const payload: any = { style: customAnimStyle, label: customImageLabel || "Custom Living Artwork" };
+      if (customImageDataUrl) {
+        payload.dataUrl = customImageDataUrl;
+      } else if (customImageUrl) {
+        payload.imageUrl = customImageUrl;
+      } else {
+        alert("Please select an image file or enter an image URL.");
+        setUploadingImage(false);
+        return;
+      }
+
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to upload image");
+
+      setSelectedScene(data.filename);
+      setStyle(customAnimStyle);
+      setLiveAnimatorEnabled(true);
+      setPreviewMode(true);
+      setUploadModalOpen(false);
+      setStatus({ kind: "ok", text: `Custom image activated as living ${customAnimStyle.toUpperCase()} scene!` });
+    } catch (err: any) {
+      alert("Error activating image: " + err.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // Handle ambient audio
   function toggleAmbient() {
@@ -708,24 +850,43 @@ export default function Home() {
                     <span>Living Animated Scene Artwork</span>
                     <span className="field-hint">Dynamic Ken Burns camera motion & analog tape shimmer</span>
                   </label>
-                  <button
-                    type="button"
-                    className="preset-chip"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(168, 85, 247, 0.25))",
-                      border: "1px solid var(--accent)",
-                      color: "var(--text)",
-                      fontWeight: 600,
-                      padding: "0.35rem 0.85rem",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.45rem",
-                    }}
-                    onClick={() => setRefRepoOpen(true)}
-                  >
-                    <span>📚 Reference Library ({refCounts.total})</span>
-                    <span style={{ fontSize: "0.7rem", opacity: 0.85 }}>[100 Lofi • 100 Anime • 100 Pixar]</span>
-                  </button>
+                  <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="preset-chip"
+                      style={{
+                        background: "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(168, 85, 247, 0.25))",
+                        border: "1px solid var(--accent)",
+                        color: "var(--text)",
+                        fontWeight: 600,
+                        padding: "0.35rem 0.75rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.45rem",
+                      }}
+                      onClick={() => setRefRepoOpen(true)}
+                    >
+                      <span>📚 Reference Library ({refCounts.total})</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="preset-chip"
+                      style={{
+                        background: "linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(59, 130, 246, 0.25))",
+                        border: "1px solid var(--success)",
+                        color: "var(--text)",
+                        fontWeight: 600,
+                        padding: "0.35rem 0.75rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.45rem",
+                      }}
+                      onClick={() => setUploadModalOpen(true)}
+                    >
+                      <span>🖼️ Animate Custom Image</span>
+                      <span style={{ fontSize: "0.7rem", opacity: 0.85 }}>[Lofi / Anime / Pixar]</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Active Reference Asset Banner (if user selected one from the 300-repo) */}
@@ -1068,6 +1229,21 @@ export default function Home() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <span className={`deck-led ${busy ? "busy" : ""}`} />
                 <span style={{ fontWeight: 600 }}>STUDIO MONITOR</span>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  style={{
+                    padding: "0.15rem 0.5rem",
+                    fontSize: "0.7rem",
+                    background: liveAnimatorEnabled ? "rgba(16, 185, 129, 0.22)" : undefined,
+                    color: liveAnimatorEnabled ? "var(--success)" : undefined,
+                    borderColor: liveAnimatorEnabled ? "var(--success)" : undefined,
+                  }}
+                  onClick={() => setLiveAnimatorEnabled(!liveAnimatorEnabled)}
+                  title="Toggle real-time atmospheric particles (LoFi rain, Anime fireflies, Pixar embers)"
+                >
+                  {liveAnimatorEnabled ? "✨ Animator: LIVE" : "⏸ Animator: OFF"}
+                </button>
                 {result && (
                   <button
                     type="button"
@@ -1135,21 +1311,42 @@ export default function Home() {
                       }}
                     />
                   ) : (
-                    <img
-                      src={sceneImgSrc}
-                      alt={activeSceneLabel}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        filter: "brightness(0.72) contrast(1.05)",
-                        transform: "scale(1.03)",
-                        transition: "all 0.5s ease",
-                      }}
-                    />
+                    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "hidden" }}>
+                      <img
+                        src={sceneImgSrc}
+                        alt={activeSceneLabel}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          filter:
+                            style === "anime"
+                              ? "brightness(0.85) contrast(1.18) saturate(1.4)"
+                              : style === "pixar"
+                              ? "brightness(0.88) contrast(1.15) drop-shadow(0 0 16px rgba(245,158,11,0.3))"
+                              : "brightness(0.75) contrast(1.05)",
+                          transform: liveAnimatorEnabled ? "scale(1.04)" : "scale(1.0)",
+                          transition: "all 0.6s ease",
+                        }}
+                      />
+                      {liveAnimatorEnabled && (
+                        <canvas
+                          ref={animatorCanvasRef}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            pointerEvents: "none",
+                            zIndex: 1,
+                          }}
+                        />
+                      )}
+                    </div>
                   )}
                   <div
                     style={{
@@ -1588,6 +1785,173 @@ export default function Home() {
                   );
                 })
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload & Animate Still Image Modal */}
+      {uploadModalOpen && (
+        <div className="modal-overlay" onClick={() => setUploadModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <span style={{ fontSize: "1.5rem" }}>🖼️</span>
+                <div>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0 }}>
+                    Add & Animate Still Image
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    Transform any static photo into a living, animated LoFi, Anime, or Pixar 3D scene
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="action-btn"
+                style={{ padding: "0.3rem 0.7rem", minWidth: "auto" }}
+                onClick={() => setUploadModalOpen(false)}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+              {/* File Drop / Select Area */}
+              <div
+                style={{
+                  border: "2px dashed var(--border)",
+                  borderRadius: 14,
+                  padding: "1.5rem",
+                  textAlign: "center",
+                  background: customImageDataUrl ? "rgba(16, 185, 129, 0.08)" : "var(--surface-card)",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "all 0.2s",
+                }}
+                onClick={() => document.getElementById("custom-image-file-input")?.click()}
+              >
+                <input
+                  id="custom-image-file-input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/jpg"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        setCustomImageDataUrl(ev.target?.result as string);
+                        setCustomImageLabel(file.name.replace(/\.[^/.]+$/, ""));
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+                {customImageDataUrl ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", justifyContent: "center" }}>
+                    <img
+                      src={customImageDataUrl}
+                      alt="Preview"
+                      style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid var(--accent)" }}
+                    />
+                    <div style={{ textAlign: "left" }}>
+                      <strong style={{ color: "var(--success)", display: "block" }}>✓ Image Selected</strong>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Click to choose a different file</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <span style={{ fontSize: "2rem", display: "block", marginBottom: "0.4rem" }}>📁</span>
+                    <strong style={{ display: "block", fontSize: "0.95rem" }}>Drop your image here, or browse files</strong>
+                    <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Supports high-res PNG, JPG, WebP</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Or URL input */}
+              <div className="field">
+                <label htmlFor="custom-image-url">Or Paste Image URL</label>
+                <input
+                  id="custom-image-url"
+                  type="url"
+                  placeholder="https://example.com/aesthetic-photo.jpg"
+                  value={customImageUrl}
+                  onChange={(e) => {
+                    setCustomImageUrl(e.target.value);
+                    if (e.target.value) setCustomImageDataUrl(null);
+                  }}
+                />
+              </div>
+
+              {/* Artwork Label */}
+              <div className="field">
+                <label htmlFor="custom-image-title">Scene Label</label>
+                <input
+                  id="custom-image-title"
+                  type="text"
+                  placeholder="e.g. Rainy Bedroom at 2AM"
+                  value={customImageLabel}
+                  onChange={(e) => setCustomImageLabel(e.target.value)}
+                />
+              </div>
+
+              {/* Animation Mode Style Choice */}
+              <div>
+                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.88rem" }}>
+                  Select Living Animation Style:
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.6rem" }}>
+                  <div
+                    className={`style-card ${customAnimStyle === "lofi" ? "active" : ""}`}
+                    onClick={() => setCustomAnimStyle("lofi")}
+                    style={{ padding: "0.75rem", cursor: "pointer" }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem", display: "block" }}>🎧 LoFi Tape</span>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.3 }}>
+                      Analog camera breath, rain streaks & warm film grain
+                    </span>
+                  </div>
+                  <div
+                    className={`style-card ${customAnimStyle === "anime" ? "active" : ""}`}
+                    onClick={() => setCustomAnimStyle("anime")}
+                    style={{ padding: "0.75rem", cursor: "pointer" }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem", display: "block" }}>🌸 Anime Cel</span>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.3 }}>
+                      Makoto Shinkai sky pan drift, cel sharpness & fireflies
+                    </span>
+                  </div>
+                  <div
+                    className={`style-card ${customAnimStyle === "pixar" ? "active" : ""}`}
+                    onClick={() => setCustomAnimStyle("pixar")}
+                    style={{ padding: "0.75rem", cursor: "pointer" }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem", display: "block" }}>✨ Pixar 3D</span>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.3 }}>
+                      Volumetric bloom pulse, floating golden embers & parallax
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="button"
+                className="cta-button"
+                disabled={uploadingImage || (!customImageDataUrl && !customImageUrl)}
+                onClick={handleUploadAndAnimate}
+                style={{ marginTop: "0.5rem" }}
+              >
+                {uploadingImage ? (
+                  <>
+                    <div className="step-indicator spinning" style={{ width: 16, height: 16 }} />
+                    <span>Processing & Animating Image...</span>
+                  </>
+                ) : (
+                  <span>🚀 Activate & Animate in Studio</span>
+                )}
+              </button>
             </div>
           </div>
         </div>

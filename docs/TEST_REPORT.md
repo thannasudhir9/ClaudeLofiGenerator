@@ -1,15 +1,15 @@
 # 🧪 Automated Test Engine Report & E2E Validation
 
-> **Execution Date & Time**: October 13, 2026 — 16:13:52 CEST  
+> **Execution Date & Time**: October 13, 2026 — 16:35:14 CEST  
 > **Testing Suite**: Claude LoFi Studio Automated E2E Engine (`tests/test_engine.py`)  
-> **Status**: **8/8 Passed (100.0%)**  
+> **Status**: **10/10 Passed (100.0%)**  
 
 ---
 
 ## 📊 Summary Metrics
 
-- **Total Test Cases**: 8
-- **Tests Passed**: 8
+- **Total Test Cases**: 10
+- **Tests Passed**: 10
 - **Tests Failed**: 0
 - **Success Rate**: **100.0%**
 
@@ -19,14 +19,16 @@
 
 | Category | Test Name | Status | Execution Time | Output & Diagnostics |
 |---|---|---|---|---|
-| ✅ **API** | `GET /api/scenes` | **PASSED** | 2117.7 ms | Returned 10 preset scenes with IDs and styles |
-| ✅ **API** | `GET /api/moods` | **PASSED** | 2033.16 ms | Returned 10 musical moods (Chilled Study, Rainy Tokyo, Ghibli, Pixar, etc.) |
-| ✅ **API** | `GET /api/references (300 AI Database)` | **PASSED** | 2049.71 ms | Verified 300 items: LoFi: 100, Anime: 100, Pixar: 100 |
-| ✅ **API** | `GET /api/stock-videos (Stock Video Loops)` | **PASSED** | 2047.84 ms | Verified 6 60fps MP4 loops (rain desk, cafe steam, anime sunset, pixar hearth, etc.) |
-| ✅ **Audio Engine** | `Procedural Audio DSP Synthesis (4 Moods)` | **PASSED** | 626.58 ms | Generated 4 authentic WAV tracks: {'night': 441044, 'shinkai_anime': 441044, 'ghibli_garden': 441044, 'pixar_cozy': 441044} |
-| ✅ **Video Pipeline** | `Video Loop Rendering (-stream_loop -1 & Subtitle Escaping)` | **PASSED** | 3055.77 ms | Successfully rendered 10s MP4 (Job #0fab2faa): 1996759 bytes |
-| ✅ **Frontend E2E** | `Next.js Frontend Studio & Modals (Playwright E2E)` | **PASSED** | 26187.48 ms | Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs) and captured 6 screenshots |
-| ✅ **Frontend E2E** | `Standalone HTML5 Fallback UI (Port 3000 E2E)` | **PASSED** | 3098.58 ms | Verified zero-dependency standalone studio and captured screenshot 07 |
+| ✅ **API** | `GET /api/scenes` | **PASSED** | 2102.81 ms | Returned 12 preset scenes with IDs and styles |
+| ✅ **API** | `GET /api/moods` | **PASSED** | 2051.45 ms | Returned 10 musical moods (Chilled Study, Rainy Tokyo, Ghibli, Pixar, etc.) |
+| ✅ **API** | `GET /api/references (300 AI Database)` | **PASSED** | 2063.9 ms | Verified 300 items: LoFi: 100, Anime: 100, Pixar: 100 |
+| ✅ **API** | `GET /api/stock-videos (Stock Video Loops)` | **PASSED** | 2032.83 ms | Verified 6 60fps MP4 loops (rain desk, cafe steam, anime sunset, pixar hearth, etc.) |
+| ✅ **API** | `POST /api/upload-image (Add & Animate Image)` | **PASSED** | 2033.88 ms | Registered custom image scene: custom_1791902089491_405c8d.png |
+| ✅ **Audio Engine** | `Procedural Audio DSP Synthesis (4 Moods)` | **PASSED** | 586.55 ms | Generated 4 authentic WAV tracks: {'night': 441044, 'shinkai_anime': 441044, 'ghibli_garden': 441044, 'pixar_cozy': 441044} |
+| ✅ **Video Pipeline** | `Video Loop Rendering (-stream_loop -1 & Subtitle Escaping)` | **PASSED** | 3118.6 ms | Rendered 10s MP4 (Job #330ea102): 2004924 bytes |
+| ✅ **Video Pipeline** | `Still Image Living Animator (Anime Sky Pan Drift & Cel Grade)` | **PASSED** | 4653.41 ms | Synthesized living animated video: 825741 bytes |
+| ✅ **Frontend E2E** | `Next.js Frontend Studio & Modals (Playwright E2E)` | **PASSED** | 13642.98 ms | Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs), and Custom Image Animator Modal |
+| ✅ **Frontend E2E** | `Standalone HTML5 Fallback UI (Port 3000 E2E)` | **PASSED** | 2549.15 ms | Verified zero-dependency standalone studio and captured screenshot 07 |
 
 ---
 
@@ -41,3 +43,4 @@ During the Playwright execution, full-page screenshots were captured and archive
 5. **`05_stock_videos_modal.png`**: Seamless 60fps MP4 Stock Video Loops browser modal with live video cards.
 6. **`06_studio_monitor_video_loop.png`**: Live video playback active in Studio Monitor with canvas visualizer overlay.
 7. **`07_fallback_html5_studio.png`**: Standalone HTML5/CSS3 fallback studio running on port 3000.
+8. **`08_custom_image_animator_modal.png`**: Custom Still Image Animator modal with style options (LoFi, Anime, Pixar).

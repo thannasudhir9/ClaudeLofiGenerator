@@ -309,6 +309,14 @@
           <option value="lofi_slow_morning.jpg">Sunny Morning Room (Sunlit linen curtains & acoustic guitar)</option>
         </select>
         <p class="hint">Synthesizes dynamic Ken Burns camera motion & analog tape shimmer over genuine artwork.</p>
+
+        <div style="margin-top: 0.8rem; padding: 0.8rem; background: var(--surface-card); border-radius: 12px; border: 1px dashed var(--border);">
+          <label for="customImageInput" style="font-size: 0.88rem; font-weight: 600; color: var(--accent); display: block;">
+            🖼️ Or Upload Your Own Image (Animate as LoFi, Anime or Pixar)
+          </label>
+          <input type="file" id="customImageInput" accept="image/*" style="margin-top: 0.4rem; padding: 0.4rem; font-size: 0.82rem; width: 100%;">
+          <p class="hint" style="margin-top: 0.3rem;">Upload any photo. Our engine will synthesize live atmospheric camera motion, dynamic lighting bloom, and style grading.</p>
+        </div>
       </div>
     </div>
 
@@ -522,6 +530,40 @@
 
   $("pubYt").addEventListener("click", () => publish("youtube", $("pubYt")));
   $("pubIg").addEventListener("click", () => publish("instagram", $("pubIg")));
+
+  $("customImageInput").addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setStatus("Uploading & preparing custom artwork...", "info");
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const style = $("style").value;
+        const res = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dataUrl: ev.target.result,
+            label: file.name.replace(/\.[^/.]+$/, ""),
+            style: style,
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Upload failed");
+        
+        // Add option to select#scene and select it
+        const opt = document.createElement("option");
+        opt.value = data.filename;
+        opt.textContent = `★ Custom Upload: ${file.name} (${style.toUpperCase()})`;
+        $("scene").insertBefore(opt, $("scene").firstChild);
+        $("scene").value = data.filename;
+        setStatus(`Custom image loaded! Ready to render as live animated ${style.toUpperCase()} video.`, "ok");
+      } catch (err) {
+        setStatus("Upload error: " + err.message, "error");
+      }
+    };
+    reader.readAsDataURL(file);
+  });
 
   async function loadHistory() {
     try {
