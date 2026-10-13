@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-10-13T16:13:52.936702",
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0,
+    "pass_rate_percent": 100.0
+  },
+  "results": [
+    {
+      "name": "GET /api/scenes",
+      "category": "API",
+      "status": "PASSED",
+      "duration_ms": 2117.7,
+      "details": "Returned 10 preset scenes with IDs and styles",
+      "error": null
+    },
+    {
+      "name": "GET /api/moods",
+      "category": "API",
+      "status": "PASSED",
+      "duration_ms": 2033.16,
+      "details": "Returned 10 musical moods (Chilled Study, Rainy Tokyo, Ghibli, Pixar, etc.)",
+      "error": null
+    },
+    {
+      "name": "GET /api/references (300 AI Database)",
+      "category": "API",
+      "status": "PASSED",
+      "duration_ms": 2049.71,
+      "details": "Verified 300 items: LoFi: 100, Anime: 100, Pixar: 100",
+      "error": null
+    },
+    {
+      "name": "GET /api/stock-videos (Stock Video Loops)",
+      "category": "API",
+      "status": "PASSED",
+      "duration_ms": 2047.84,
+      "details": "Verified 6 60fps MP4 loops (rain desk, cafe steam, anime sunset, pixar hearth, etc.)",
+      "error": null
+    },
+    {
+      "name": "Procedural Audio DSP Synthesis (4 Moods)",
+      "category": "Audio Engine",
+      "status": "PASSED",
+      "duration_ms": 626.58,
+      "details": "Generated 4 authentic WAV tracks: {'night': 441044, 'shinkai_anime': 441044, 'ghibli_garden': 441044, 'pixar_cozy': 441044}",
+      "error": null
+    },
+    {
+      "name": "Video Loop Rendering (-stream_loop -1 & Subtitle Escaping)",
+      "category": "Video Pipeline",
+      "status": "PASSED",
+      "duration_ms": 3055.77,
+      "details": "Successfully rendered 10s MP4 (Job #0fab2faa): 1996759 bytes",
+      "error": null
+    },
+    {
+      "name": "Next.js Frontend Studio & Modals (Playwright E2E)",
+      "category": "Frontend E2E",
+      "status": "PASSED",
+      "duration_ms": 26187.48,
+      "details": "Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs) and captured 6 screenshots",
+      "error": null
+    },
+    {
+      "name": "Standalone HTML5 Fallback UI (Port 3000 E2E)",
+      "category": "Frontend E2E",
+      "status": "PASSED",
+      "duration_ms": 3098.58,
+      "details": "Verified zero-dependency standalone studio and captured screenshot 07",
+      "error": null
+    }
+  ]
+}
