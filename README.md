@@ -50,6 +50,12 @@ All views and modals are captured at full 1440x900 resolution and archived in [`
 
 ---
 
+### 6. AI Generated Living Video Demonstration (Krishna & Radha Beach Melody)
+*Real-time synthesized 15-second living video with Makoto Shinkai celestial camera pan drift, ambient ocean waves, and procedural lofi flute/piano music generated from the user prompt: "krishna and radha devi sitting near a beach and listening to pleasant music".*
+![Krishna and Radha AI Video Demo](./screenshots/09_krishna_radha_studio_demo.png)
+
+---
+
 ## 🌟 Overview
 
 **Claude LoFi Generator** is a next-generation automated audio-visual generation studio. It synthesizes nostalgic, relaxing, and aesthetically stunning video loops combined with procedurally generated lo-fi chord progressions, warm analog basslines, and rich ambient soundscapes (rain, vinyl crackle, cafe murmur, tape flutter, wind chimes, binaural beats).

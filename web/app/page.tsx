@@ -103,6 +103,7 @@ export default function Home() {
     { id: "lofi_sunset_balcony.jpg", label: "Sunset Balcony", tag: "Golden hour sunset & vinyl record player", style: "lofi", url: "/backgrounds/lofi_sunset_balcony.jpg" },
     { id: "lofi_starlight_bedroom.jpg", label: "Starlight Galaxy", tag: "Celestial night sky, moon lamp & cozy bed", style: "lofi", url: "/backgrounds/lofi_starlight_bedroom.jpg" },
     { id: "lofi_slow_morning.jpg", label: "Sunny Morning Room", tag: "Warm morning sunlight & acoustic guitar", style: "lofi", url: "/backgrounds/lofi_slow_morning.jpg" },
+    { id: "krishna_radha_beach.jpg", label: "Krishna & Radha Beach Twilight", tag: "Celestial flute melody by the ocean shore with lotus blooms", style: "anime", url: "/backgrounds/krishna_radha_beach.jpg" },
   ]);
   const [selectedScene, setSelectedScene] = useState<string>("lofi_study_girl.jpg");
   const [previewMode, setPreviewMode] = useState<boolean>(true);
