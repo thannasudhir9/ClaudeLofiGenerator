@@ -1,0 +1,68 @@
+[
+  {
+    "id": "stock_lofi_rain_desk",
+    "title": "Rainy Lofi Study Desk Loop",
+    "category": "lofi",
+    "style": "lofi",
+    "mood": "night",
+    "filename": "stock_lofi_rain_desk.mp4",
+    "path": "/stock_videos/stock_lofi_rain_desk.mp4",
+    "duration": 10,
+    "tags": ["lofi", "rain", "study", "desk", "film grain"]
+  },
+  {
+    "id": "stock_anime_sunset",
+    "title": "Shinkai Twilight Train Sunset Loop",
+    "category": "anime",
+    "style": "anime",
+    "mood": "shinkai_anime",
+    "filename": "stock_anime_sunset.mp4",
+    "path": "/stock_videos/stock_anime_sunset.mp4",
+    "duration": 10,
+    "tags": ["anime", "sunset", "clouds", "shinkai", "twilight"]
+  },
+  {
+    "id": "stock_pixar_fireplace",
+    "title": "Pixar 3D Hearth Cabin Loop",
+    "category": "pixar",
+    "style": "pixar",
+    "mood": "pixar_cozy",
+    "filename": "stock_pixar_fireplace.mp4",
+    "path": "/stock_videos/stock_pixar_fireplace.mp4",
+    "duration": 10,
+    "tags": ["pixar", "3d", "fireplace", "cozy", "cabin", "bloom"]
+  },
+  {
+    "id": "stock_anime_ghibli",
+    "title": "Ghibli Summer Cottage Porch Loop",
+    "category": "anime",
+    "style": "anime",
+    "mood": "ghibli_garden",
+    "filename": "stock_anime_ghibli.mp4",
+    "path": "/stock_videos/stock_anime_ghibli.mp4",
+    "duration": 10,
+    "tags": ["anime", "ghibli", "summer", "cottage", "garden"]
+  },
+  {
+    "id": "stock_lofi_cafe",
+    "title": "Cozy Rainy Coffee Shop Loop",
+    "category": "lofi",
+    "style": "lofi",
+    "mood": "lofi_cafe",
+    "filename": "stock_lofi_cafe.mp4",
+    "path": "/stock_videos/stock_lofi_cafe.mp4",
+    "duration": 10,
+    "tags": ["lofi", "cafe", "rain", "coffee", "espresso"]
+  },
+  {
+    "id": "stock_pixar_stars",
+    "title": "Pixar Rooftop Stargazing Loop",
+    "category": "pixar",
+    "style": "pixar",
+    "mood": "dreamy",
+    "filename": "stock_pixar_stars.mp4",
+    "path": "/stock_videos/stock_pixar_stars.mp4",
+    "duration": 10,
+    "tags": ["pixar", "3d", "stars", "telescope", "midnight"]
+  }
+]

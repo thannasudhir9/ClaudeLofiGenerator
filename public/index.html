@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lofi Studio — Video & Music Generator (Engine v2.0)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0814;
+    --surface: #151124;
+    --surface-card: #1c1731;
+    --surface-hover: #261f43;
+    --border: rgba(255, 255, 255, 0.09);
+    --text: #f5f2fc;
+    --text-muted: #a69bbd;
+    --accent: #f59e0b;
+    --accent-glow: rgba(245, 158, 11, 0.28);
+    --coral: #f43f5e;
+    --success: #10b981;
+    --error: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: var(--bg);
+    background-image: radial-gradient(circle at 50% 0%, #20163b 0%, #0c0919 60%, #07050e 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    margin: 0;
+    padding: 1.5rem 1rem;
+    min-height: 100vh;
+  }
+  main { max-width: 840px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.2rem; }
+  
+  .banner {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(244, 63, 94, 0.15));
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 14px;
+    padding: 0.9rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .banner-link {
+    background: linear-gradient(135deg, #f59e0b, #f43f5e);
+    color: #fff;
+    padding: 0.45rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    transition: transform 0.2s;
+  }
+  .banner-link:hover { transform: translateY(-1px); }
+
+  .header-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.2rem 1.5rem;
+  }
+  .brand-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .brand-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 100px;
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  textarea, input[type=text], input[type=number], input[type=url], select {
+    width: 100%;
+    background: var(--surface-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    font: inherit;
+    outline: none;
+    transition: all 0.2s;
+  }
+  textarea:focus, input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  textarea { min-height: 85px; resize: vertical; }
+
+  label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  @media(max-width: 600px) { .row { grid-template-columns: 1fr; } }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.3rem; }
+  .chip {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+
+  button {
+    padding: 0.75rem 1.4rem;
+    background: linear-gradient(135deg, #f59e0b, #f43f5e);
+    border: 0;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+  button.alt { background: var(--surface-card); border: 1px solid var(--border); color: var(--text); }
+  button.alt:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: wait; transform: none; }
+
+  .status {
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    background: var(--surface-card);
+    color: var(--text-muted);
+    display: none;
+  }
+  .status.active { display: block; }
+  .status.ok { color: var(--success); background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); }
+  .status.error { color: var(--error); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+  .video-container {
+    background: #000;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  }
+  video { width: 100%; display: block; max-height: 440px; }
+
+  .download-links {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .download-links a {
+    flex: 1;
+    min-width: 140px;
+    text-align: center;
+    padding: 0.6rem;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .download-links a:hover { border-color: var(--accent); }
+
+  .hint { color: var(--text-muted); font-size: .82rem; margin-top: 0.2rem; }
+  .hidden { display: none !important; }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .history-item {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<main>
+  <!-- Link to the main Next.js App -->
+  <div class="banner">
+    <div>
+      <strong style="display:block; font-size: 0.95rem;">🚀 Looking for the full interactive studio?</strong>
+      <span class="hint" style="color: rgba(255,255,255,0.8);">Next.js Studio with live Web Audio vinyl/rain mixer, preset chips & visualizer is running on port 3001.</span>
+    </div>
+    <a class="banner-link" href="http://localhost:3001/" target="_blank">Open Full Studio →</a>
+  </div>
+
+  <div class="header-card">
+    <div class="brand-title">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M9 18V5l12-2v13" stroke="currentColor" strokeWidth="2.5" fill="none" />
+        <circle cx="6" cy="18" r="3" />
+        <circle cx="18" cy="16" r="3" />
+      </svg>
+      <span>Lofi Video Generator</span>
+      <span class="brand-badge">Engine v2.0</span>
+    </div>
+    <span class="hint">Port 3000 Engine Interface</span>
+  </div>
+
+  <div class="panel">
+    <label for="tool">Generation Mode</label>
+    <select id="tool">
+      <option value="lofi-prompt">Lo-fi Video Maker: prompt (synthesized music + gradient)</option>
+      <option value="lofi-youtube">Lo-fi Video Maker: YouTube song (+ looping GIF)</option>
+      <option value="slides">Audio Slides: lyric scenes over lofi music</option>
+      <option value="trim">AI Video Editor: trim silent pauses from current render</option>
+    </select>
+
+    <div id="promptFields">
+      <label for="prompt">Prompt Description</label>
+      <textarea id="prompt" placeholder="e.g. rainy night study session with warm lamp light">Rainy night study session with warm lamp light</textarea>
+      <div class="chips">
+        <span class="chip" onclick="setPrompt('Makoto Shinkai anime twilight train window with radiant sunset clouds', 'shinkai_anime', 'anime_shinkai_sunset.jpg', 'anime')">🌸 Shinkai Twilight (Anime)</span>
+        <span class="chip" onclick="setPrompt('Pixar 3D animated cozy winter cabin with hot cocoa and sleeping puppy', 'pixar_cozy', 'pixar_cozy_cabin.jpg', 'pixar')">✨ Pixar Fireplace (Pixar)</span>
+        <span class="chip" onclick="setPrompt('Studio Ghibli country cottage porch overlooking sunlit summer garden', 'ghibli_garden', 'anime_ghibli_garden.jpg', 'anime')">🍃 Ghibli Garden (Anime)</span>
+        <span class="chip" onclick="setPrompt('Pixar 3D animated rooftop with vintage telescope and fluffy white cat', 'dreamy', 'pixar_rooftop_stars.jpg', 'pixar')">🔭 Pixar Stargazing</span>
+        <span class="chip" onclick="setPrompt('Rainy night study session with warm amber lamp light', 'night', 'lofi_study_girl.jpg', 'lofi')">🌧️ Rainy Study (Lofi)</span>
+        <span class="chip" onclick="setPrompt('Cozy bookstore cafe with warm espresso and soft rain on glass', 'lofi_cafe', 'lofi_rainy_cafe.jpg', 'lofi')">☕ Cozy Cafe</span>
+        <span class="chip" onclick="setPrompt('Rainy midnight Tokyo ramen bar with neon sign reflections', 'cyberpunk', 'lofi_tokyo_cyberpunk.jpg', 'lofi')">🏮 Midnight Tokyo</span>
+      </div>
+
+      <div class="row" style="margin-top: 0.8rem;">
+        <div>
+          <label for="mood">Harmonic Mood</label>
+          <select id="mood">
+            <option value="shinkai_anime">Shinkai Twilight (78 BPM - Emotional Piano)</option>
+            <option value="pixar_cozy">Pixar Hearth (72 BPM - Cozy Music Box Chimes)</option>
+            <option value="ghibli_garden">Ghibli Garden (74 BPM - Summer Acoustic Peace)</option>
+            <option value="night">Night Rain (74 BPM - Study Rhodes & Rain)</option>
+            <option value="sunset">Golden Hour (78 BPM - Dusk Rooftop Breeze)</option>
+            <option value="morning">Slow Morning (72 BPM - Sunlit Calm)</option>
+            <option value="lofi_cafe">Cozy Cafe (75 BPM - Bookstore & Espresso)</option>
+            <option value="cyberpunk">Neon Midnight (82 BPM - Tokyo Synth Reflections)</option>
+            <option value="dreamy">Starlight Drift (70 BPM - Cosmic Slumber)</option>
+            <option value="autumn">Autumn Leaves (76 BPM - Vintage Cassette)</option>
+          </select>
+        </div>
+        <div>
+          <label for="style">Visual Filter Grade</label>
+          <select id="style">
+            <option value="lofi">Lofi (Harmonic tape, clean wave, vinyl glow)</option>
+            <option value="anime">Anime (Vibrant cel-shading, high sharpness & contrast)</option>
+            <option value="pixar">Pixar (Volumetric 3D bloom, golden diffusion highlight)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top: 0.8rem;">
+        <label for="scene">Living Animated Lofi Artwork</label>
+        <select id="scene">
+          <option value="anime_shinkai_sunset.jpg">Shinkai Twilight Train (Makoto Shinkai vibrant clouds & Tokyo sunset)</option>
+          <option value="pixar_cozy_cabin.jpg">Pixar Fireplace Cabin (3D animated cabin, hot cocoa & puppy)</option>
+          <option value="anime_ghibli_garden.jpg">Ghibli Summer Porch (Hand-painted country garden & butterflies)</option>
+          <option value="pixar_rooftop_stars.jpg">Pixar Rooftop Stargazing (3D animated telescope & starry night)</option>
+          <option value="lofi_study_girl.jpg">Anime Study Desk (Classic Lofi Girl with cat, lamp & rain)</option>
+          <option value="lofi_rainy_cafe.jpg">Cozy Rainy Cafe (Steaming coffee cup & Tokyo rain bokeh)</option>
+          <option value="lofi_tokyo_cyberpunk.jpg">Tokyo Neon Alley (Rainy street, neon ramen bar & retro car)</option>
+          <option value="lofi_sunset_balcony.jpg">Sunset Balcony (Golden hour skyline & spinning vinyl player)</option>
+          <option value="lofi_starlight_bedroom.jpg">Starlight Galaxy (Celestial galaxy skylight & cozy bed)</option>
+          <option value="lofi_slow_morning.jpg">Sunny Morning Room (Sunlit linen curtains & acoustic guitar)</option>
+        </select>
+        <p class="hint">Synthesizes dynamic Ken Burns camera motion & analog tape shimmer over genuine artwork.</p>
+      </div>
+    </div>
+
+    <div id="ytFields" class="hidden">
+      <label for="ytUrl">YouTube Song URL</label>
+      <input id="ytUrl" type="url" placeholder="https://www.youtube.com/watch?v=...">
+      <label for="gifUrl" style="margin-top: 0.6rem;">GIF URL (Looping background, under 20 MB)</label>
+      <input id="gifUrl" type="url" placeholder="https://media.giphy.com/media/.../giphy.gif">
+      <p class="hint">Downloads and converts the audio track to 44.1 kHz WAV.</p>
+    </div>
+
+    <div id="slidesFields" class="hidden">
+      <label for="scenes">Scenes (one line each, up to 12)</label>
+      <textarea id="scenes" style="height: 110px" placeholder="Rainy night&#10;Warm lamp light&#10;Study with me&#10;Gentle peace">Rainy night&#10;Warm lamp light&#10;Study with me&#10;Gentle peace</textarea>
+      <p class="hint">Each line is displayed as timed centered subtitles over synthesized lofi music.</p>
+    </div>
+
+    <div id="trimFields" class="hidden">
+      <p class="hint">Removes silence pauses longer than 0.6s from the currently loaded video.</p>
+    </div>
+
+    <div id="genRow" class="row">
+      <div>
+        <label for="seconds">Length (seconds, 10 to 240)</label>
+        <input id="seconds" type="number" value="60" min="10" max="240">
+      </div>
+      <div>
+        <label for="aspectRatio">Aspect Ratio</label>
+        <select id="aspectRatio">
+          <option value="16:9">16:9 Landscape (YouTube / Desktop)</option>
+          <option value="9:16">9:16 Vertical (Shorts / Reels / TikTok)</option>
+          <option value="1:1">1:1 Square (Instagram Feed)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="watermark">Watermark (Optional)</label>
+        <input id="watermark" type="text" maxlength="60" placeholder="@mylofi">
+      </div>
+    </div>
+
+    <button id="go">Generate Lofi Video</button>
+    <div id="status" class="status"></div>
+
+    <div id="playerBox" class="video-container hidden">
+      <video id="player" controls></video>
+    </div>
+
+    <div id="downloads" class="download-links hidden">
+      <a id="dlMp4" href="#" download>Download Video (MP4)</a>
+      <a id="dlWav" href="#" download>Download Audio (WAV)</a>
+    </div>
+
+    <!-- Publishing section -->
+    <h3 style="margin-top: 1.4rem; font-size: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.2rem;">Export & Social Publishing</h3>
+    <div class="row">
+      <div>
+        <label for="title">Video Title</label>
+        <input id="title" type="text" maxlength="100" value="Lofi study mix">
+      </div>
+      <div>
+        <label for="privacy">YouTube Privacy</label>
+        <select id="privacy"><option>private</option><option>unlisted</option><option>public</option></select>
+      </div>
+    </div>
+    <div>
+      <label for="desc">Description / Caption</label>
+      <textarea id="desc" placeholder="Optional description or Instagram caption"></textarea>
+    </div>
+    <div style="display:flex; gap: 0.6rem; flex-wrap: wrap;">
+      <button id="pubYt" class="alt" disabled>Post to YouTube</button>
+      <button id="pubIg" class="alt" disabled>Post to Instagram Reels</button>
+    </div>
+    <div id="pubStatus" class="status"></div>
+
+    <!-- History list -->
+    <h3 style="margin-top: 1.4rem; font-size: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.2rem;">Recent Renders History</h3>
+    <div id="historyList" class="history-list">
+      <div class="hint">Loading previous renders...</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let currentJob = null;
+
+  function setPrompt(text, mood, scene, style) {
+    $("prompt").value = text;
+    if (mood) $("mood").value = mood;
+    if (scene) $("scene").value = scene;
+    if (style) $("style").value = style;
+  }
+
+  function showTool() {
+    const t = $("tool").value;
+    $("promptFields").classList.toggle("hidden", t !== "lofi-prompt");
+    $("ytFields").classList.toggle("hidden", t !== "lofi-youtube");
+    $("slidesFields").classList.toggle("hidden", t !== "slides");
+    $("trimFields").classList.toggle("hidden", t !== "trim");
+    $("genRow").classList.toggle("hidden", t === "trim");
+    $("go").textContent = t === "trim" ? "Trim Pauses" : "Generate Lofi Video";
+  }
+  $("tool").addEventListener("change", showTool);
+  showTool();
+
+  async function post(url, body) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
+  function showResult(data) {
+    currentJob = data.id;
+    $("player").src = data.url;
+    $("playerBox").classList.remove("hidden");
+    $("downloads").classList.remove("hidden");
+    $("dlMp4").href = data.url;
+    $("dlMp4").setAttribute("download", `lofi-${data.id}.mp4`);
+    $("dlWav").href = data.audioUrl || `/outputs/${data.id}/audio.wav`;
+    $("dlWav").setAttribute("download", `lofi-${data.id}.wav`);
+    $("pubYt").disabled = false;
+    $("pubIg").disabled = false;
+    loadHistory();
+  }
+
+  function setStatus(text, kind = "info") {
+    const s = $("status");
+    s.textContent = text;
+    s.className = `status active ${kind}`;
+  }
+
+  $("go").addEventListener("click", async () => {
+    const tool = $("tool").value;
+    const seconds = Number($("seconds").value);
+    const watermark = $("watermark").value.trim();
+    const aspectRatio = $("aspectRatio").value;
+    const style = $("style").value;
+    const mood = $("mood").value;
+    const scene = $("scene") ? $("scene").value : "lofi_study_girl.jpg";
+    const btn = $("go");
+
+    btn.disabled = true;
+    setStatus("Synthesizing audio and rendering video... please wait.", "info");
+
+    try {
+      let data;
+      if (tool === "lofi-youtube") {
+        data = await post("/api/from-youtube", {
+          youtubeUrl: $("ytUrl").value.trim(),
+          gifUrl: $("gifUrl").value.trim(),
+          scene,
+          seconds,
+          watermark,
+          aspectRatio,
+        });
+        setStatus("Done! Rendered from YouTube audio.", "ok");
+      } else if (tool === "slides") {
+        const scenes = $("scenes").value.trim();
+        if (!scenes) throw new Error("Enter at least one scene line.");
+        data = await post("/api/slides", { scenes, seconds, scene, watermark, aspectRatio });
+        setStatus(`Done! Rendered story slides (${data.moodLabel}).`, "ok");
+      } else if (tool === "trim") {
+        if (!currentJob) throw new Error("Select or render a video first, then trim it.");
+        data = await post("/api/trim-silence", { jobId: currentJob });
+        setStatus(`Done! Removed ${data.removedSeconds.toFixed(1)}s of silence pauses.`, "ok");
+      } else {
+        const prompt = $("prompt").value.trim();
+        if (!prompt) throw new Error("Enter a prompt first.");
+        data = await post("/api/generate", { prompt, seconds, style, mood, scene, aspectRatio, watermark });
+        setStatus(`Done! Rendered with ${data.moodLabel} palette.`, "ok");
+      }
+      showResult(data);
+    } catch (err) {
+      setStatus("Error: " + err.message, "error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  async function publish(target, btn) {
+    if (!currentJob) return;
+    btn.disabled = true;
+    const s = $("pubStatus");
+    s.textContent = `Posting to ${target}...`;
+    s.className = "status active info";
+    try {
+      const data = await post("/api/publish", {
+        jobId: currentJob,
+        target,
+        title: $("title").value.trim(),
+        description: $("desc").value.trim(),
+        privacy: $("privacy").value,
+      });
+      s.textContent = data.url ? `Posted: ${data.url}` : `Posted (ID: ${data.id})`;
+      s.className = "status active ok";
+    } catch (err) {
+      s.textContent = "Error: " + err.message;
+      s.className = "status active error";
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $("pubYt").addEventListener("click", () => publish("youtube", $("pubYt")));
+  $("pubIg").addEventListener("click", () => publish("instagram", $("pubIg")));
+
+  async function loadHistory() {
+    try {
+      const res = await fetch("/api/history");
+      const data = await res.json();
+      if (!data.items || !data.items.length) {
+        $("historyList").innerHTML = "<div class='hint'>No previous renders found.</div>";
+        return;
+      }
+      $("historyList").innerHTML = data.items.slice(0, 10).map(item => `
+        <div class="history-item">
+          <div>
+            <strong>${item.title || ('Lofi #' + item.id)}</strong>
+            <span class="hint" style="margin-left: 0.4rem;">(${item.sub || ''} • ${item.seconds || 60}s • ${item.aspectRatio || '16:9'})</span>
+          </div>
+          <div style="display:flex; gap: 0.3rem;">
+            <button class="alt" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="loadJob('${item.id}', '${item.url}', '${item.audioUrl}')">▶ Play</button>
+            <a href="${item.url}" download class="alt" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; text-decoration: none; border-radius: 8px;">MP4</a>
+          </div>
+        </div>
+      `).join("");
+    } catch {}
+  }
+
+  function loadJob(id, url, audioUrl) {
+    showResult({ id, url, audioUrl });
+  }
+
+  async function loadReferences() {
+    try {
+      const res = await fetch("/api/references?limit=300");
+      const data = await res.json();
+      if (!data.items || !data.items.length) return;
+
+      const sceneSelect = $("scene");
+      const lofiGroup = document.createElement("optgroup");
+      lofiGroup.label = "🎧 Lofi Reference Repo (100 assets)";
+      const animeGroup = document.createElement("optgroup");
+      animeGroup.label = "🌸 Anime & Ghibli Reference Repo (100 assets)";
+      const pixarGroup = document.createElement("optgroup");
+      pixarGroup.label = "✨ Pixar 3D Reference Repo (100 assets)";
+
+      for (const item of data.items) {
+        const opt = document.createElement("option");
+        opt.value = item.path;
+        opt.textContent = `${item.title} [${item.style} • ${item.mood}]`;
+        if (item.category === "lofi") lofiGroup.appendChild(opt);
+        else if (item.category === "anime") animeGroup.appendChild(opt);
+        else if (item.category === "pixar") pixarGroup.appendChild(opt);
+      }
+
+      sceneSelect.appendChild(lofiGroup);
+      sceneSelect.appendChild(animeGroup);
+      sceneSelect.appendChild(pixarGroup);
+
+      // Also append stock video loops
+      const vidsRes = await fetch("/api/stock-videos");
+      const vidsData = await vidsRes.json();
+      if (vidsData.items && vidsData.items.length) {
+        const videoGroup = document.createElement("optgroup");
+        videoGroup.label = "🎬 Stock Video Loops (Animated MP4)";
+        for (const vid of vidsData.items) {
+          const opt = document.createElement("option");
+          opt.value = vid.path;
+          opt.textContent = `${vid.title} [${vid.style} • ${vid.mood}]`;
+          videoGroup.appendChild(opt);
+        }
+        sceneSelect.appendChild(videoGroup);
+      }
+    } catch (err) {
+      console.warn("Could not load references:", err);
+    }
+  }
+
+  loadReferences();
+  loadHistory();
+</script>
+</body>
+</html>

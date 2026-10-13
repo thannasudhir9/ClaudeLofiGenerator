@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+web/node_modules/
+
+# Next.js Build Output
+web/.next/
+web/out/
+.next/
+
+# Runtime Generated Video/Audio outputs
+outputs/*
+!outputs/.gitkeep
+outputs/*/*.mp4
+outputs/*/*.wav
+outputs/*/*.jpg
+outputs/*/*.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server.log
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+web/.env*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary scratch files
+scratch/
