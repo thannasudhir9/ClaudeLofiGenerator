@@ -250,3 +250,23 @@ When custom still images were uploaded, `server.mjs` pushed the new scene descri
 1. **Dynamic File Existence Verification**: Implemented `getActiveScenes()` in `server.mjs` to dynamically verify via `stat` that custom uploaded files actually exist on disk before serving them in `/api/scenes` or `/api/moods`.
 2. **Defensive Image Error Handling**: Added `onError` fallback handlers on all scene thumbnail images in `web/app/page.tsx` (`(e.target as HTMLImageElement).src = "/backgrounds/lofi_study_girl.jpg"`).
 3. **Automated Interactive Audit**: Created `tests/audit_ui.py` running headless Playwright to monitor console logs, network requests, DOM visibility, and theme switching. Audit results: **0 Page Errors, 0 Console Errors, 0 Warnings, 0 Broken Images**.
+
+---
+
+### 🔴 BUG-011: Curated Reference Asset Library Modal Cards Collapsing to 0px Height
+
+#### Date & Time
+**October 13, 2026 — 19:35:00 CEST**
+
+#### Problem Description
+Opening the Curated Reference Asset Library modal showed empty, collapsed 2px horizontal lines instead of the 300 aesthetic reference artworks, and Stock Video Loops displayed black boxes.
+
+#### Root Cause Analysis
+1. In `web/app/globals.css`, `.ref-card` was styled as a column flexbox container inside a CSS Grid without an explicit height or minimum height. Its child `.ref-card-img-wrap` had `aspect-ratio: 16 / 10` but no explicit pixel height. Under flexbox layout rules with `overflow: hidden`, the aspect-ratio collapsed `ref-card-img-wrap` to `0px` and the overall card to `2px` (border only).
+2. For HTML5 `<video>` elements in the Stock Video Loops tab, videos did not have poster thumbnails or forced frame decodes (`#t=0.1`), rendering as black rectangles prior to user interaction.
+
+#### Engineering Fix
+1. **Explicit CSS Sizing**: Updated `web/app/globals.css` with `min-height: 260px` on `.ref-card` and `height: 145px; min-height: 145px;` on `.ref-card-img-wrap`, ensuring cards and artwork images expand to full, glorious proportions across all viewports.
+2. **Video Posters & Frame Seek**: Generated high-resolution thumbnail posters (`.jpg`) for all 6 stock video loops, and added `poster`, `preload="auto"`, and `#t=0.1` seek parameters to `<video>` elements in `web/app/page.tsx`.
+3. **Image Fallbacks**: Added `onError` fallback handlers on all reference modal images.
+4. **Validation**: Verified in headless Playwright that cards render at full `260px` height and captured fresh screenshots (`02_reference_modal_lofi.png`, `03_reference_modal_anime.png`, `04_reference_modal_pixar.png`, `05_stock_videos_modal.png`). All 300 reference artworks and 6 video loops display instantly and beautifully.

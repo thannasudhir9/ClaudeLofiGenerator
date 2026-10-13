@@ -261,4 +261,19 @@ Developed and executed automated interactive browser audit (`tests/audit_ui.py`)
    - **Functional Issues**: 0
    - **Test Suite Pass Rate**: 10/10 (100%)
 
+---
+
+### Prompt 11: Fix Reference Asset Library Empty / Collapsed Cards
+**Timestamp**: `2026-10-13T19:35:00+02:00`
+**User Request**: *"Curated Reference Asset Library is not showing anything fix it"*
+
+#### Root Cause Identified
+In `web/app/globals.css`, `.ref-card` was a column flexbox item inside CSS Grid with no explicit `min-height`, and its child `.ref-card-img-wrap` used `aspect-ratio: 16 / 10` without an explicit pixel height. Under flexbox rules with `overflow: hidden`, the aspect-ratio computation collapsed the image wrap to `0px` and the entire card to `2px` (border only), rendering all 300 reference cards as invisible flat lines. Furthermore, stock video loops lacked poster thumbnails, showing black boxes.
+
+#### Actions Taken & Engineering Solutions
+1. **Card & Image Sizing in CSS**: Added `min-height: 260px` to `.ref-card` and `height: 145px; min-height: 145px; display: block;` to `.ref-card-img-wrap` and `.ref-card-img` in `web/app/globals.css`.
+2. **Video Posters & Preload**: Generated thumbnail posters (`.jpg`) for all 6 stock video loops in `public/stock_videos/`, and wired `poster`, `preload="auto"`, and `#t=0.1` seek to the `<video>` elements in `web/app/page.tsx`.
+3. **Defensive Image Handling**: Added `onError` fallback handlers on all reference modal images.
+4. **Validation & Screenshots**: Verified in Playwright that cards render at full `260px` height and captured fresh screenshots (`02_reference_modal_lofi.png`, `03_reference_modal_anime.png`, `04_reference_modal_pixar.png`, `05_stock_videos_modal.png`). All 10/10 E2E tests and interactive audits passed with 100% success.
+
 

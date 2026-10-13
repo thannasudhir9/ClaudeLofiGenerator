@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-13T19:22:39.917199",
+  "timestamp": "2026-10-13T19:33:34.852419",
   "summary": {
     "total": 10,
     "passed": 10,
@@ -11,7 +11,7 @@
       "name": "GET /api/scenes",
       "category": "API",
       "status": "PASSED",
-      "duration_ms": 2086.37,
+      "duration_ms": 2111.35,
       "details": "Returned 10 preset scenes with IDs and styles",
       "error": null
     },
@@ -19,7 +19,7 @@
       "name": "GET /api/moods",
       "category": "API",
       "status": "PASSED",
-      "duration_ms": 2060.51,
+      "duration_ms": 2030.52,
       "details": "Returned 10 musical moods (Chilled Study, Rainy Tokyo, Ghibli, Pixar, etc.)",
       "error": null
     },
@@ -27,7 +27,7 @@
       "name": "GET /api/references (300 AI Database)",
       "category": "API",
       "status": "PASSED",
-      "duration_ms": 2080.66,
+      "duration_ms": 2039.88,
       "details": "Verified 300 items: LoFi: 100, Anime: 100, Pixar: 100",
       "error": null
     },
@@ -35,7 +35,7 @@
       "name": "GET /api/stock-videos (Stock Video Loops)",
       "category": "API",
       "status": "PASSED",
-      "duration_ms": 2029.67,
+      "duration_ms": 2045.27,
       "details": "Verified 6 60fps MP4 loops (rain desk, cafe steam, anime sunset, pixar hearth, etc.)",
       "error": null
     },
@@ -43,15 +43,15 @@
       "name": "POST /api/upload-image (Add & Animate Image)",
       "category": "API",
       "status": "PASSED",
-      "duration_ms": 2068.04,
-      "details": "Registered custom image scene: custom_1791912133508_d15a2b.jpg",
+      "duration_ms": 2065.28,
+      "details": "Registered custom image scene: custom_1791912789706_d7f677.jpg",
       "error": null
     },
     {
       "name": "Procedural Audio DSP Synthesis (4 Moods)",
       "category": "Audio Engine",
       "status": "PASSED",
-      "duration_ms": 549.05,
+      "duration_ms": 513.8,
       "details": "Generated 4 authentic WAV tracks: {'night': 441044, 'shinkai_anime': 441044, 'ghibli_garden': 441044, 'pixar_cozy': 441044}",
       "error": null
     },
@@ -59,23 +59,23 @@
       "name": "Video Loop Rendering (-stream_loop -1 & Subtitle Escaping)",
       "category": "Video Pipeline",
       "status": "PASSED",
-      "duration_ms": 3321.81,
-      "details": "Rendered 10s MP4 (Job #1f1cb563): 1314574 bytes",
+      "duration_ms": 3099.2,
+      "details": "Rendered 10s MP4 (Job #8e3c441a): 1312802 bytes",
       "error": null
     },
     {
       "name": "Still Image Living Animator (Anime Sky Pan Drift & Cel Grade)",
       "category": "Video Pipeline",
       "status": "PASSED",
-      "duration_ms": 6803.07,
-      "details": "Synthesized living animated video: 795897 bytes",
+      "duration_ms": 6239.58,
+      "details": "Synthesized living animated video: 800787 bytes",
       "error": null
     },
     {
       "name": "Next.js Frontend Studio & Modals (Playwright E2E)",
       "category": "Frontend E2E",
       "status": "PASSED",
-      "duration_ms": 12721.05,
+      "duration_ms": 12308.92,
       "details": "Verified Studio Monitor, Reference Modal (LoFi, Anime, Pixar, Stock Video tabs), and Custom Image Animator Modal",
       "error": null
     },
@@ -83,7 +83,7 @@
       "name": "Standalone HTML5 Fallback UI (Port 3000 E2E)",
       "category": "Frontend E2E",
       "status": "PASSED",
-      "duration_ms": 2688.57,
+      "duration_ms": 2796.16,
       "details": "Verified zero-dependency standalone studio and captured screenshot 07",
       "error": null
     }

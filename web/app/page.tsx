@@ -1735,11 +1735,13 @@ export default function Home() {
                       <div className="ref-card-img-wrap">
                         {isItemVideo ? (
                           <video
-                            src={item.path}
+                            src={`${item.path}#t=0.1`}
+                            poster={item.path.replace(/\.(mp4|webm)$/, ".jpg")}
                             autoPlay
                             loop
                             muted
                             playsInline
+                            preload="auto"
                             className="ref-card-img"
                           />
                         ) : (
@@ -1748,6 +1750,9 @@ export default function Home() {
                             alt={item.title}
                             className="ref-card-img"
                             loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/backgrounds/lofi_study_girl.jpg";
+                            }}
                           />
                         )}
                         <span className={`ref-category-badge ${item.category}`}>{item.category}</span>

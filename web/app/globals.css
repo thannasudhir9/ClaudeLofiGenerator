@@ -1149,6 +1149,7 @@ textarea {
   flex-direction: column;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  min-height: 260px;
 }
 
 .ref-card:hover {
@@ -1164,7 +1165,8 @@ textarea {
 
 .ref-card-img-wrap {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: 145px;
+  min-height: 145px;
   position: relative;
   overflow: hidden;
   background: #090812;
@@ -1174,6 +1176,7 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
   transition: transform 0.4s ease;
 }
 
